@@ -1,5 +1,5 @@
 const pprint = data => console.log(JSON.stringify(data, null, 2))
-const codaToken = "791d107b-3e88-43a4-a4ce-4bda54ebf0dc"
+const codaToken = "insert your coda API token here"
 const ftch = (url, body = {}, options = {headers: {}}) => (
   JSON.parse(
     UrlFetchApp.fetch(
