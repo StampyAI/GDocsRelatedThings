@@ -1,13 +1,38 @@
 # How to use this
 
-1. Go to https://script.google.com and make a new project
-2. Add the "Docs API" service from the Services tab on the left sidebar
-3. Recreate the three files in this directory in the editor
-4. Put your Coda API token in utils.gs on line 2 - you can generate one at https://coda.io/account -> API Settings
-5. Run `parseAllAnswerDocs` in `main.gs`
-6. That's it
+## Install all dependancies:
 
-## High-level execution overview
+    npm install
+
+## Setup [Clasp](https://github.com/google/clasp)
+
+1. Grant Clasp access to your project: `npx clasp login`
+2. Enable the [Google Apps Script API](https://script.google.com/home/usersettings)
+3. Create a new Script app :`npx clasp create --type docs --title Stampy-parser`
+
+## Deploy your code to Scripts:
+
+For a one off deployment, use `npx clasp push`.
+If you want to develop locally and have your changes automatically synced, use `npx clasp push --watch`.
+
+## Setup API keys:
+
+1. Put your Coda API token in utils.js on line 2 - you can generate one at https://coda.io/account -> API Settings. This
+will need to be a Read/Write token for the Answers table (or the whole doc) for everything to work, but for testing purposes
+a Read token will be fine - it'll just fail when writing to Coda.
+2. If you want to ping Discord on failures (you probably don't...), provide the appropriate tokens in the utils.js::sendToDiscord() function
+
+## Setup Docs API access:
+
+1. Go to https://script.google.com and select your project
+2. Add the "Docs API" service from the Services tab on the left sidebar
+
+## Execution
+
+1. Run `parseAllAnswerDocs` in `main.gs`
+2. That's it
+
+# High-level execution overview
 
 1. Load all questions from Coda
 2. For each question

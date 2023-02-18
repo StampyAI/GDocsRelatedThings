@@ -76,6 +76,7 @@ const sendToDiscord = ({content = "Missing error details", embeds = []} = {}, is
   const url = isError
     ? "Secret webhook URL goes here" // Goes to #stampy-error-log in Rob's Discord
     : "Secret webhook URL goes here" // Goes to #wiki-feed in Rob's Discord
+  if (url === "Secret webhook URL goes here") return
 
   const body = {
     author: {
