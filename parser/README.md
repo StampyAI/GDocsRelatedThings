@@ -3,7 +3,7 @@
 1. Go to https://script.google.com and make a new project
 2. Add the "Docs API" service from the Services tab on the left sidebar
 3. Recreate the three files in this directory in the editor
-4. Ideally, put your own Coda API token in utils.gs - you can generate one at https://coda.io/account -> API Settings
+4. Put your Coda API token in utils.gs on line 2 - you can generate one at https://coda.io/account -> API Settings
 5. Run `parseAllAnswerDocs` in `main.gs`
 6. That's it
 

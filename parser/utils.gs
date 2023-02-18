@@ -1,5 +1,5 @@
 const pprint = data => console.log(JSON.stringify(data, null, 2))
-const codaToken = "insert your coda API token here"
+const codaToken = "get your own at https://coda.io/account -> API Settings -> Generate API token"
 const ftch = (url, body = {}, options = {headers: {}}) => (
   JSON.parse(
     UrlFetchApp.fetch(
@@ -51,14 +51,48 @@ const getAnswers = () => {
 
 // Some answers are HUGE and full of youtube embeds, so we sometimes need to squash them as Coda only lets us push 85KB into their API at a time. 40K of markdown seems to become 95K over the wire, so we set our limit a good few K under that.
 const compressMarkdown = md => {
+  const beforeSize = md.length
+  let currentSize = beforeSize
   let ret = md
-  if (ret.length > 30000) {
+
+  if (beforeSize > 25000) {
     // <iframe src="https://www.youtube.com/embed/${videoID}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>\n\n
-    ret = ret.replaceAll(/<iframe src="https:\/\/www.youtube.com\/embed\/(?<videoID>[A-z0-9\-_]+)" title="(?<videoTitle>.*?)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen><\/iframe>\n\n/g, "[$<videoTitle>](https://youtu.be/$<videoID>)")
+    ret = ret.replaceAll(/<iframe src="https:\/\/www.youtube.com\/embed\/(?<videoID>[A-z0-9\-_]+)" title="(?<videoTitle>.*?)" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen><\/iframe>/g, "\n[$<videoTitle>](https://youtu.be/$<videoID>)\n")
+    currentSize = ret.length
   }
 
   // Also clear out excessive newlines, we get a lot of those
   ret = ret.replaceAll(/\n\n(\n+)/g, "\n\n")
+  currentSize = ret.length
 
   return ret
+}
+
+const parserError = (text, data) => {
+  return new Error(JSON.stringify({errMsg: text, ...(data ? {data} : {})}))
+}
+
+const sendToDiscord = ({content = "Missing error details", embeds = []} = {}, isError = false) => {
+  const url = isError
+    ? "Secret webhook URL goes here" // Goes to #stampy-error-log in Rob's Discord
+    : "Secret webhook URL goes here" // Goes to #wiki-feed in Rob's Discord
+
+  const body = {
+    author: {
+      name: "Stampy's answer doc parser"
+    },
+    content,
+    ...(embeds.length ? {
+      embeds: embeds.map(embed => ({...embed, fields: [...Object.entries(embed.fields)].map(([name, value]) => ({name, value}))}))
+    } : {})
+  }
+
+  UrlFetchApp.fetch(
+    url,
+    {
+      method: "post",
+      contentType: "application/json",
+      payload: JSON.stringify(body)
+    }
+  )
 }

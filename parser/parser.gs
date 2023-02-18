@@ -1,6 +1,5 @@
 // Accumulators for the count and total text length of all suggestions
-let suggestionIDs = new Set()
-let suggestionSize = 0
+let suggestions = new Map()
 
 const parseDoc = doc => {
   // contextual information about the doc that is sometimes useful
@@ -78,10 +77,14 @@ const parseDoc = doc => {
 
     const md = (body + "\n\n" + footnotes)
 
-    const ret = {md, relatedAnswerDocIDs, suggestionCount: suggestionIDs.size, suggestionSize}
+    // Take the maximum of each suggestion's insertions and deletions
+    // This helps replacements not seem ridiculously huge
+    let suggestionSize = [...suggestions.entries()].map(([_, s], i, a) => Math.max(...Object.values(s))).reduce((size, acc) => acc + size, 0)
+    const debug = Object.fromEntries(suggestions.entries())
 
-    suggestionIDs = new Set()
-    suggestionSize = 0
+    const ret = {md, relatedAnswerDocIDs, suggestionCount: suggestions.size, suggestionSize}
+
+    suggestions = new Map()
 
     return ret
   }
@@ -143,9 +146,11 @@ const parseParagraph = documentContext => paragraph => {
   const { elements, ...paragraphContext } = paragraph
   const paragraphStyleName = paragraphContext.paragraphStyle.namedStyleType
 
-  let md = elements.map(parseElement({documentContext, paragraphContext})).join("").replace(/\n$/g, "")
+  let md = elements.map(parseElement({documentContext, paragraphContext}))
 
   let prefix = ""
+  let itemMarker = ""
+  let leadingSpace = ""
   
   // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
   if (paragraphStyleName.indexOf("HEADING_") === 0) {
@@ -155,25 +160,34 @@ const parseParagraph = documentContext => paragraph => {
   }
 
   if (paragraphContext.bullet) {
-    const nestingLevel = paragraphContext.bullet.nestingLevel || 0
+    const pb = paragraphContext.bullet
+    const nestingLevel = pb.nestingLevel || 0
+    const listID = pb.listId
+    const list = documentContext.lists[listID]
+    const currentLevel = list.listProperties.nestingLevels[nestingLevel]
 
-    // Ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
+    // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
     // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
     // Anyway, ordered lists specify a "glyphType" while unordered ones specify a "glyphSymbol" so we're using that as a discriminator
-    const isOrdered = documentContext.lists[paragraphContext.bullet.listId].listProperties.nestingLevels[nestingLevel].hasOwnProperty("glyphType")
-      && documentContext.lists[paragraphContext.bullet.listId].listProperties.nestingLevels[nestingLevel].glyphType !== "GLYPH_TYPE_UNSPECIFIED"
+    const isOrdered = currentLevel.hasOwnProperty("glyphType")
+      && currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED"
 
     // Please forgive me for always using 1. as the sequence number on list items
     // It's sorta hard to count them properly so I'm depending on markdown renderers doing the heavy lifting for me.
     // Which, in fairness, they're supposed to.
-    prefix = new Array(nestingLevel).fill("    ").join("") + (isOrdered ? "1. " : "- ") + prefix
-  }
+    itemMarker = isOrdered ? "1. " : "- "
+    leadingSpace = new Array(nestingLevel).fill("    ").join("")
 
-  return prefix + md
+    return leadingSpace + itemMarker + prefix + md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
+  } else {
+    return leadingSpace + itemMarker + prefix + md.join("").replaceAll("\n", "\n" + leadingSpace)
+  }
 }
 
 const parsetextRun = textRun => {
   const isType = type => Object.keys(textRun.textStyle).includes(type) && textRun.textStyle[type] !== false
+
+  let text = textRun.content
 
   // GDocs spits out lots of differently formatted things as "textRun" elements so we need a bunch of checks here to make sure we do everything required by the formatting
 
@@ -208,9 +222,9 @@ const parsetextRun = textRun => {
     const trailingSpaceRegex = / *$/
     prefix = (textRun.content.match(leadingSpaceRegex)?.[0] || "") + prefix
     suffix = suffix + (textRun.content.match(trailingSpaceRegex)?.[0] || "")
-    const trimmedText = textRun.content.trim()
+    text = text.trim()
 
-    return prefix + trimmedText + suffix
+    return prefix + text + suffix
   }
 }
 
@@ -240,9 +254,10 @@ const parsefootnoteReference = footnoteReference => {
 
 const parseinlineObjectElement = (inlineObjectElement, { documentContext }) => {
   // I hate this line. The JSON representation of a google Doc is fairly deeply nested, this is just the path we have to probe top get the URL of the image that's been references by the object ID in the paragraph
-  const embeddedObject = documentContext.inlineObjects[inlineObjectElement.inlineObjectId].inlineObjectProperties.embeddedObject
-  const imageURL = embeddedObject.imageProperties.contentUri
-  return `![${embeddedObject.description || ""}](${imageURL}${embeddedObject.title && ` "${embeddedObject.title}"`})`
+  const image = documentContext.inlineObjects[inlineObjectElement.inlineObjectId].inlineObjectProperties.embeddedObject
+  const imageURL = image.imageProperties.contentUri
+
+  return "\n" + `![${image.description || ""}](${imageURL}${image.title ? ` ${image.title}` : ""})` + "\n"
 }
 
 const parsehorizontalRule = () => {
@@ -265,10 +280,36 @@ const parseElement = context => element => {
 
   const elementContent = element[elementType]
 
-  // Pending insertions are useful for us to track, but we don't want to actually output their content.
-  // This check just returns nothing if the element we're currently looking at is tagged as a suggested insertion
-  if (elementContent.hasOwnProperty("suggestedInsertionIds")) {
-    elementContent.suggestedInsertionIds.forEach(id => suggestionIDs.add(id))
-    suggestionSize += parsers[elementType](elementContent, context).length
-  } else return parsers[elementType](elementContent, context)
+  let md = parsers[elementType](elementContent, context)
+
+  // We want to store the total size of all insertions and deletions for each suggestion so we can search for Answers with lots of pending changes
+  // If the suggestion is a replacement, we don't want it to seem super huge compared to an insertion or a deletion
+  // So rather than adding the sizes of the insertion and deletion, we just take the larger of the two
+  if (elementContent.suggestedInsertionIds) {
+    const id = elementContent.suggestedInsertionIds[0]
+    const existingSuggestion = suggestions.get(id) || {insertions: 0, deletions: 0}
+    suggestions.set(
+      id,
+      {
+        ...existingSuggestion,
+        insertions: existingSuggestion.insertions + md.length
+      }
+    )
+
+    return ""
+  } else if (elementContent.suggestedDeletionIds) {
+    const id = elementContent.suggestedDeletionIds[0]
+    const existingSuggestion = suggestions.get(id) || {insertions: 0, deletions: 0}
+    suggestions.set(
+      id,
+      {
+        ...existingSuggestion,
+        deletions: existingSuggestion.deletions + md.length
+      }
+    )
+
+    return md
+  } else {
+    return md
+  }
 }
