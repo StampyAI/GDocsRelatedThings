@@ -96,3 +96,45 @@ const sendToDiscord = ({content = "Missing error details", embeds = []} = {}, is
     }
   )
 }
+
+const isParent = (file, folder) => {
+  try {
+    var folders = file.getParents()
+    while (folders.hasNext()) {
+      if (folders.next().getId() == folder.getId())
+        return true
+    }
+  } catch (error) {
+    console.error('could not check parents for', file.getName(), folder.getName(), error)
+  }
+  return false
+}
+
+const folders = {
+  'Live on site': DriveApp.getFolderById('1feloLCiyc3XSxfaQ0L_fqVVsFMupw2JM'),
+  'In progress': DriveApp.getFolderById('1U2h3Tte38EkOff9flwo6FKVZn8OhkNLW'),
+  'Answers': DriveApp.getFolderById('1XUTbO31BMSBBZLhwFsvPObnuMbVVd59H'),
+}
+
+const moveAnswer = (answer) => {
+  var file;
+  try {
+    file = DriveApp.getFileById(answer.docID)
+  } catch (error) {
+    console.error('could not get file for', answer.answerName, error)
+    return answer
+  }
+  if(file.getMimeType() !== 'application/vnd.google-apps.document')
+    return answer
+
+  const folder = answer[codaColumnIDs.status] == 'Live on site' ? folders['Live on site'] : folders['In progress']
+  if (isParent(file, folders.Answers) && !isParent(file, folder)) {
+    console.log('moving', answer.answerName, 'to', folder.getName())
+    try {
+      file.moveTo(folder)
+    } catch (error) {
+      console.error('could not move file:', error)
+    }
+  }
+  return answer
+}
