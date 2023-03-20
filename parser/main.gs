@@ -129,6 +129,9 @@ const parseAllAnswerDocs = () => {
         } else {
           throw parserError(`HTTP ${status} response from Coda`, {answer})
         }
+
+        // Make sure the answer's document is in the correct folder
+        moveAnswer(answer)
       })
   } catch (e) {
     if (e !== "fine") {
