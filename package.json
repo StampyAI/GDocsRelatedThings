@@ -1,0 +1,27 @@
+{
+  "name": "gdocsrelatedthings",
+  "version": "1.0.0",
+  "description": "Stampy tools for parsing documents",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "prettier": "prettier --check --ignore-path .gitignore \"**/*.{ts*,js,css}\"",
+    "prettier:fix": "prettier --write --ignore-path .gitignore \"**/*.{ts*,js,css,md}\""
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StampyAI/GDocsRelatedThings.git"
+  },
+  "bugs": {
+    "url": "https://github.com/StampyAI/GDocsRelatedThings/issues"
+  },
+  "homepage": "https://github.com/StampyAI/GDocsRelatedThings#readme",
+  "dependencies": {
+    "@google-cloud/local-auth": "^2.1.0",
+    "dotenv": "^16.0.3",
+    "google-auth-library": "^8.7.0",
+    "googleapis": "^105.0.0",
+    "node-fetch": "^3.3.1",
+    "prettier": "^2.8.8"
+  }
+}
