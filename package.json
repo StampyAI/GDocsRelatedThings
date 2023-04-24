@@ -2,11 +2,15 @@
   "name": "gdocsrelatedthings",
   "version": "1.0.0",
   "description": "Stampy tools for parsing documents",
-  "main": "index.js",
+  "main": "bin/importContent.js",
   "type": "module",
+  "bin": {
+    "importContent": "bin/importContent.js"
+  },
   "scripts": {
     "prettier": "prettier --check --ignore-path .gitignore \"**/*.{ts*,js,css}\"",
-    "prettier:fix": "prettier --write --ignore-path .gitignore \"**/*.{ts*,js,css,md}\""
+    "prettier:fix": "prettier --write --ignore-path .gitignore \"**/*.{ts*,js,css,md}\"",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest"
   },
   "repository": {
     "type": "git",
@@ -23,5 +27,11 @@
     "googleapis": "^105.0.0",
     "node-fetch": "^3.3.1",
     "prettier": "^2.8.8"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "jest": "^29.5.0",
+    "jest-fetch-mock": "^3.0.3",
+    "rewire": "^6.0.0"
   }
 }

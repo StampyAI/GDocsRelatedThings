@@ -128,7 +128,7 @@ export const parseDoc = (doc) => {
 
 const getLWTag = (tagName) => {
   const md = JSON.parse(
-    UrlFetchApp.fetch(
+    fetch(
       encodeURI(
         `https://www.lesswrong.com/graphql?query={tag(input:{selector:{slug:"${tagName}"}}){result{description{markdown}}}}`
       )
