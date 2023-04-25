@@ -25,7 +25,7 @@ export const getAnswers = async (tableURL) => {
     const { items: answerBatch, nextPageLink = null } = await codaRequest(
       queryURL
     ).then((r) => r.json());
-    rows = rows.concat(answerBatch);
+    if (answerBatch) rows = rows.concat(answerBatch);
 
     // If there are more rows we haven't yet retrieved, Coda gives us a link we can access to get the next page
     if (nextPageLink) {
