@@ -1,5 +1,5 @@
-import parse from "./parser/main.js";
-import { logError } from "./parser/utils.js";
+import parse from "../parser/main.js";
+import { logError } from "../parser/utils.js";
 
 try {
   await parse();

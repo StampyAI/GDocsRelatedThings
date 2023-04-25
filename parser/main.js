@@ -42,7 +42,7 @@ const parseAllAnswerDocs = async () => {
       // At this point we have a huge blob of JSON that looks kinda like:
       // https://gist.github.com/ChrisRimmer/a2a702fe86b5251c235b22c8f4d0e2b4
       let { md, relatedAnswerDocIDs, suggestionCount, suggestionSize } =
-        parseDoc(doc);
+        await parseDoc(doc);
       md = compressMarkdown(md);
 
       // Keep only doc IDs which actually have matching answers
@@ -116,9 +116,12 @@ const parseAllAnswerDocs = async () => {
           }
         );
       } else {
-        await logError(`HTTP ${response.status} response from Coda`, {
-          answer,
-        });
+        await logError(
+          `HTTP ${response.status} response from Coda for "${answer.answerName}"`,
+          {
+            answer,
+          }
+        );
       }
 
       // Make sure the answer's document is in the correct folder
