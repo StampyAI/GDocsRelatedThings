@@ -108,9 +108,12 @@ const parseAllAnswerDocs = async () => {
           }
         } else if (response.status === 429) {
         } else if (response.statusText.includes("Row edit of size")) {
-          await logError(`Markdown was too large for Coda at ${md.length} bytes`, {
-            answer,
-          });
+          await logError(
+            `Markdown was too large for Coda at ${md.length} bytes`,
+            {
+              answer,
+            }
+          );
         } else {
           await logError(`HTTP ${response.status} response from Coda`, {
             answer,
