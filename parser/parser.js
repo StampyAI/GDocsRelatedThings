@@ -1,7 +1,5 @@
-// Accumulators for the count and total text length of all suggestions
-let suggestions = new Map();
-
-export const parseDoc = (doc) => {
+// TODO: test this function. Can't be bothered to now...
+export const parseDoc = async (doc) => {
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
   const documentContext = {
@@ -9,6 +7,7 @@ export const parseDoc = (doc) => {
     namedStyles: doc.namedStyles,
     inlineObjects: doc.inlineObjects,
     lists: doc.lists || {},
+    suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
   };
 
   // Finding the position of the related marker - it's a paragraph with only one element whose text content is the word "Related"
@@ -71,7 +70,7 @@ export const parseDoc = (doc) => {
       /https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/
     );
 
-    const md = getLWTag(match.groups.tagName);
+    const md = await getLWTag(match.groups.tagName);
     return { md, relatedAnswerDocIDs };
   } else if (
     paragraphs.length === 1 &&
@@ -83,7 +82,7 @@ export const parseDoc = (doc) => {
       /https:\/\/forum.effectivealtruism.org\/topics\/(?<tagName>[A-z0-9_-]+)/
     );
 
-    const md = getEAFTag(match.groups.tagName);
+    const md = await getEAFTag(match.groups.tagName);
     return { md, relatedAnswerDocIDs };
   } else {
     const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
@@ -108,6 +107,7 @@ export const parseDoc = (doc) => {
 
     // Take the maximum of each suggestion's insertions and deletions
     // This helps replacements not seem ridiculously huge
+    const suggestions = documentContext.suggestions;
     let suggestionSize = [...suggestions.entries()]
       .map(([_, s], i, a) => Math.max(...Object.values(s)))
       .reduce((size, acc) => acc + size, 0);
@@ -120,20 +120,18 @@ export const parseDoc = (doc) => {
       suggestionSize,
     };
 
-    suggestions = new Map();
-
     return ret;
   }
 };
 
-const getLWTag = (tagName) => {
-  const md = JSON.parse(
-    fetch(
-      encodeURI(
-        `https://www.lesswrong.com/graphql?query={tag(input:{selector:{slug:"${tagName}"}}){result{description{markdown}}}}`
-      )
-    ).getContentText()
-  ).data.tag.result.description.markdown;
+export const getTag = async (host, tagName) => {
+  const result = await fetch(
+    encodeURI(
+      `${host}/graphql?query={tag(input:{selector:{slug:"${tagName}"}}){result{description{markdown}}}}`
+    )
+  );
+  const contents = await result.json();
+  const md = contents?.data?.tag?.result?.description?.markdown || "";
 
   // EAF mostly gives us valid markdown but their citations are in a really weird format
   // It's unlike anything I can see in the reference material I'm using to write our markdown
@@ -159,40 +157,11 @@ const getLWTag = (tagName) => {
     .replace(footnoteRefPattern, footnoteRefReplacement);
 };
 
-const getEAFTag = (tagName) => {
-  const md = JSON.parse(
-    UrlFetchApp.fetch(
-      encodeURI(
-        `https://forum.effectivealtruism.org/graphql?query={tag(input:{selector:{slug:"${tagName}"}}){result{description{markdown}}}}`
-      )
-    ).getContentText()
-  ).data.tag.result.description.markdown;
+const getLWTag = (tagName) => getTag("https://www.lesswrong.com", tagName);
+const getEAFTag = (tagName) =>
+  getTag("https://forum.effectivealtruism.org", tagName);
 
-  // EAF mostly gives us valid markdown but their citations are in a really weird format
-  // It's unlike anything I can see in the reference material I'm using to write our markdown
-  // https://www.markdownguide.org/extended-syntax/#footnotes
-
-  // Lots and lots of escaping here because the text we're sent looks like:
-  // ^[\\[1\\]](#fn0f5x8s34vee)^
-  // and needs to become:
-  // [^0f5x8s34vee]
-  const footnotePattern = /\^\[\\\[\d+\\\]\]\(#fn([A-z0-9]+)\)\^/gm;
-  const footnoteReplacement = "[^$1]";
-
-  // This one's even worse! We need to replace things that look like:
-  // 1.  ^**[^](#fnref0f5x8s34vee)**^ [and then two newlines]
-  // With things that look like:
-  // [^0f5x8s34vee]:
-  const footnoteRefPattern =
-    /^\d+\.  \^\*\*\[\^\]\(#fnref([A-z0-9]+)\)\*\*\^\n    \n    /gm;
-  const footnoteRefReplacement = "[^$1]: ";
-
-  return md
-    .replace(footnotePattern, footnoteReplacement)
-    .replace(footnoteRefPattern, footnoteRefReplacement);
-};
-
-const parseParagraph = (documentContext) => (paragraph) => {
+export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
   const paragraphStyleName = paragraphContext.paragraphStyle.namedStyleType;
 
@@ -245,50 +214,51 @@ const parseParagraph = (documentContext) => (paragraph) => {
   }
 };
 
-const parsetextRun = (textRun) => {
-  const isType = (type) =>
-    Object.keys(textRun.textStyle).includes(type) &&
-    textRun.textStyle[type] !== false;
+export const parsetextRun = ({ textStyle, content }) => {
+  if (content === "\n" || content.length === 0) {
+    //  We add newlines into the markdown when joining all the segments up, so we don't need to keep pieces of text that are just newlines
+    return "";
+  }
 
-  let text = textRun.content;
+  const isType = (type) =>
+    textStyle &&
+    Object.keys(textStyle).includes(type) &&
+    textStyle[type] !== false;
+
+  let text = content;
 
   // GDocs spits out lots of differently formatted things as "textRun" elements so we need a bunch of checks here to make sure we do everything required by the formatting
 
-  if (textRun.content === "\n" || textRun.content.length === 0) {
-    //  We add newlines into the markdown when joining all the segments up, so we don't need to keep pieces of text that are just newlines
-    return "";
-  } else {
-    let prefix = "";
-    let suffix = "";
+  let prefix = "";
+  let suffix = "";
 
-    if (isType("bold")) {
-      prefix += "**";
-      suffix += "**";
-    }
-
-    if (isType("italic")) {
-      prefix += "*";
-      suffix += "*";
-    }
-
-    if (isType("link")) {
-      prefix += "[";
-      suffix = `](${textRun.textStyle.link.url})` + suffix;
-    }
-
-    // This looks kinda weird but basically sometimes Google gives us a string like "THIS IS SOME BOLD TEXT " - notice the trailing space
-    // Markdown doesn't handle **THIS IS SOME BOLD TEXT ** correctly so we need to move that whitespace outside of the formatting markers.
-    const leadingSpaceRegex = /^ */;
-    const trailingSpaceRegex = / *$/;
-    prefix = (textRun.content.match(leadingSpaceRegex)?.[0] || "") + prefix;
-    suffix = suffix + (textRun.content.match(trailingSpaceRegex)?.[0] || "");
-    text = text.trim();
-
-    return prefix + text + suffix;
+  if (isType("bold")) {
+    prefix += "**";
+    suffix += "**";
   }
+
+  if (isType("italic")) {
+    prefix += "*";
+    suffix += "*";
+  }
+
+  if (isType("link")) {
+    prefix += "[";
+    suffix = `](${textStyle.link.url})` + suffix;
+  }
+
+  // This looks kinda weird but basically sometimes Google gives us a string like "THIS IS SOME BOLD TEXT " - notice the trailing space
+  // Markdown doesn't handle **THIS IS SOME BOLD TEXT ** correctly so we need to move that whitespace outside of the formatting markers.
+  const leadingSpaceRegex = /^ */;
+  const trailingSpaceRegex = / *$/;
+  prefix = (content.match(leadingSpaceRegex)?.[0] || "") + prefix;
+  suffix = suffix + (content.match(trailingSpaceRegex)?.[0] || "");
+  text = text.trim();
+
+  return prefix + text + suffix;
 };
 
-const parserichLink = ({ richLinkProperties: { title, uri } }) => {
+export const parserichLink = ({ richLinkProperties: { title, uri } }) => {
   const youtubeURL =
     /^(https?:)?\/\/(www.)?youtube.com\/watch\?v=(?<videoID>[A-z0-9\-_]+)/;
   const youtubeURLShort =
@@ -309,11 +279,14 @@ const parserichLink = ({ richLinkProperties: { title, uri } }) => {
   }
 };
 
-const parsefootnoteReference = (footnoteReference) => {
+export const parsefootnoteReference = (footnoteReference) => {
   return `[^${footnoteReference.footnoteId}]`;
 };
 
-const parseinlineObjectElement = (inlineObjectElement, { documentContext }) => {
+export const parseinlineObjectElement = (
+  inlineObjectElement,
+  { documentContext }
+) => {
   // I hate this line. The JSON representation of a google Doc is fairly deeply nested, this is just the path we have to probe top get the URL of the image that's been references by the object ID in the paragraph
   const image =
     documentContext.inlineObjects[inlineObjectElement.inlineObjectId]
@@ -329,11 +302,29 @@ const parseinlineObjectElement = (inlineObjectElement, { documentContext }) => {
   );
 };
 
-const parsehorizontalRule = () => {
+export const parsehorizontalRule = () => {
   return "___";
 };
 
-const parseElement = (context) => (element) => {
+const updateSuggestions = (docContext, elementContent, key, amount) => {
+  const suggestions = docContext?.suggestions;
+  if (!suggestions) return;
+
+  const id =
+    key == "insertions"
+      ? elementContent.suggestedInsertionIds[0]
+      : elementContent.suggestedDeletionIds[0];
+  const existingSuggestion = suggestions.get(id) || {
+    insertions: 0,
+    deletions: 0,
+  };
+  suggestions.set(id, {
+    ...existingSuggestion,
+    [key]: existingSuggestion[key] + amount,
+  });
+};
+
+export const parseElement = (context) => (element) => {
   const parsers = {
     textRun: parsetextRun,
     richLink: parserichLink,
@@ -354,28 +345,20 @@ const parseElement = (context) => (element) => {
   // If the suggestion is a replacement, we don't want it to seem super huge compared to an insertion or a deletion
   // So rather than adding the sizes of the insertion and deletion, we just take the larger of the two
   if (elementContent.suggestedInsertionIds) {
-    const id = elementContent.suggestedInsertionIds[0];
-    const existingSuggestion = suggestions.get(id) || {
-      insertions: 0,
-      deletions: 0,
-    };
-    suggestions.set(id, {
-      ...existingSuggestion,
-      insertions: existingSuggestion.insertions + md.length,
-    });
-
+    updateSuggestions(
+      context.documentContext,
+      elementContent,
+      "insertions",
+      md.length
+    );
     return "";
   } else if (elementContent.suggestedDeletionIds) {
-    const id = elementContent.suggestedDeletionIds[0];
-    const existingSuggestion = suggestions.get(id) || {
-      insertions: 0,
-      deletions: 0,
-    };
-    suggestions.set(id, {
-      ...existingSuggestion,
-      deletions: existingSuggestion.deletions + md.length,
-    });
-
+    updateSuggestions(
+      context.documentContext,
+      elementContent,
+      "deletions",
+      md.length
+    );
     return md;
   } else {
     return md;

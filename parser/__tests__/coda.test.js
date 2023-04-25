@@ -6,19 +6,19 @@ import { codaColumnIDs } from "../constants.js";
 fetch.enableMocks();
 
 describe("getDocIDFromLink", () => {
-  test("returns the correct doc ID for a valid Google Docs link", () => {
+  it("returns the correct doc ID for a valid Google Docs link", () => {
     const docLink =
       "https://docs.google.com/document/d/1234567890abcdefghijklmnopqrstuvwxyz";
     const expectedDocID = "1234567890abcdefghijklmnopqrstuvwxyz";
     expect(getDocIDFromLink(docLink)).toBe(expectedDocID);
   });
 
-  test("returns null for an invalid Google Docs link", () => {
+  it("returns null for an invalid Google Docs link", () => {
     const docLink = "https://google.com";
     expect(getDocIDFromLink(docLink)).toBeNull();
   });
 
-  test("returns null for a non-Google Docs link", () => {
+  it("returns null for a non-Google Docs link", () => {
     const docLink = "https://example.com";
     expect(getDocIDFromLink(docLink)).toBeNull();
   });
@@ -117,7 +117,7 @@ describe("updateAnswer", () => {
     process.env.CODA_TOKEN = "fake-token";
   });
 
-  test("updates answer with correct payload", async () => {
+  it("updates answer with correct payload", async () => {
     const id = 123;
     const md = "Updated answer";
     const relatedAnswerNames = ["Answer 1", "Answer 2"];
@@ -177,7 +177,7 @@ describe("updateAnswer", () => {
     ]);
   });
 
-  test("throws an error if fetch fails", async () => {
+  it("throws an error if fetch fails", async () => {
     const id = 123;
     const md = "Updated answer";
     const relatedAnswerNames = ["Answer 1", "Answer 2"];
