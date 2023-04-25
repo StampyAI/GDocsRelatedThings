@@ -1,8 +1,9 @@
+import fetch from "node-fetch";
 import { tableURL, codaColumnIDs } from "./constants.js";
 
-export const getDocIDFromLink = (docLink) =>
+const getDocIDFromLink = (docLink) =>
   docLink.match(/https:\/\/\w+.google.com\/(\w+\/)+(?<docID>[_-\w]{25,}).*/)
-    ?.groups?.docID || null;
+    .groups.docID;
 
 const codaRequest = async (url, options = { headers: {} }) =>
   fetch(encodeURI(url), {
