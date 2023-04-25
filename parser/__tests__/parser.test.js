@@ -2,6 +2,7 @@ import { jest } from "@jest/globals";
 import fetchMock from "jest-fetch-mock";
 import {
   parseDoc,
+  fetchExternalContent,
   getTag,
   parseParagraph,
   parsetextRun,
@@ -13,6 +14,17 @@ import {
 } from "../parser.js";
 
 fetchMock.enableMocks();
+
+const makeText = (content) => ({
+  paragraph: {
+    elements: [{ textRun: { content, textStyle: {} } }],
+    paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+  },
+});
+
+const makeLink = (uri) => ({
+  paragraph: { elements: [{ richLink: { richLinkProperties: { uri } } }] },
+});
 
 describe("getTag", () => {
   beforeEach(() => {
@@ -272,5 +284,265 @@ describe("parseParagraph", () => {
       "DECIMAL";
     const result = parseParagraph(documentContext)(listItem);
     expect(result).toEqual("    1. Hello, world!");
+  });
+});
+
+describe("parseDoc", () => {
+  beforeEach(() => {
+    fetchMock.resetMocks();
+  });
+
+  it("parses a document without footnotes or related answers", async () => {
+    const doc = {
+      body: {
+        content: [makeText("This is some text"), { table: {} }],
+      },
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.relatedAnswerDocIDs).toEqual([]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
+  it("removes everything after the related block", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          makeText("Related\n"),
+          makeLink("https://docs.google.com/document/d/123"),
+          makeText("This will be ignored"),
+          makeText("This too will be ignored"),
+        ],
+      },
+      footnotes: {},
+      lists: {},
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.relatedAnswerDocIDs).toEqual(["123"]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
+  it("handles all types of related items", async () => {
+    const textLink = makeText("other related answer");
+    textLink.paragraph.elements[0].textRun.textStyle.link = {
+      url: "https://docs.google.com/document/d/125",
+    };
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          makeText("Related\n"),
+          makeLink("https://docs.google.com/document/d/123"),
+          textLink,
+          // non valid google doc links will be ignored
+          makeLink("https://not.google.link/document/d/129"),
+          makeText("Not a link, so ignored"),
+        ],
+      },
+      footnotes: {},
+      lists: {},
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.relatedAnswerDocIDs).toEqual(["123", "125"]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
+  it("ignores things that aren't paragraphs", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          { bla: "bla" },
+          makeText("Related\n"),
+        ],
+      },
+      footnotes: {},
+      lists: {},
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.relatedAnswerDocIDs).toEqual([]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
+  it("parses a document with footnotes and related answers", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          {
+            footnote: {
+              content: [makeText("This is a footnote")],
+            },
+          },
+          makeText("Related\n"),
+          makeLink("https://docs.google.com/document/d/123"),
+        ],
+      },
+      footnotes: {
+        1: {
+          content: [makeText("This is a footnote")],
+        },
+      },
+      lists: {
+        1: {},
+      },
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n[^1]:This is a footnote");
+    expect(result.relatedAnswerDocIDs).toEqual(["123"]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
+  const mockResponse = {
+    data: {
+      tag: {
+        result: {
+          description: {
+            markdown: `This is a test`,
+          },
+        },
+      },
+    },
+  };
+
+  it("parses a document with a LessWrong tag", async () => {
+    const doc = {
+      body: {
+        content: [makeText("https://www.lesswrong.com/tag/some-tag")],
+      },
+    };
+
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is a test");
+    expect(result.relatedAnswerDocIDs).toEqual([]);
+  });
+
+  it("parses a document with an Effective Altruism Forum tag", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("https://forum.effectivealtruism.org/topics/some-tag"),
+        ],
+      },
+    };
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is a test");
+    expect(result.relatedAnswerDocIDs).toEqual([]);
+  });
+
+  it("parses a document with a LessWrong tag if the link is anywhere in the first paragraph", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText(
+            "Bla bla bla, check https://www.lesswrong.com/tag/some-tag for more info"
+          ),
+        ],
+      },
+    };
+
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is a test");
+    expect(result.relatedAnswerDocIDs).toEqual([]);
+  });
+
+  it("doesn't parse a document as a LW tag if it contains other stuff than the URL", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("https://www.lesswrong.com/tag/some-tag"),
+          makeText(
+            "This will cause it to be shown as is, rather than fetching the content"
+          ),
+        ],
+      },
+    };
+
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual(
+      "https://www.lesswrong.com/tag/some-tag\n\nThis will cause it to be shown as is, rather than fetching the content\n\n"
+    );
+    expect(result.relatedAnswerDocIDs).toEqual([]);
+  });
+});
+
+describe("fetchExternalContent", () => {
+  beforeEach(() => {
+    fetchMock.resetMocks();
+  });
+
+  const mockResponse = {
+    data: {
+      tag: {
+        result: {
+          description: {
+            markdown: `This is a test`,
+          },
+        },
+      },
+    },
+  };
+
+  it("returns null for empty paragraphs", async () => {
+    const paragraphs = [];
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toBeNull();
+  });
+
+  it("returns null for paragraphs with no text", async () => {
+    const paragraphs = [makeText("").paragraph];
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toBeNull();
+  });
+
+  it("calls getLWTag for lesswrong.com tags", async () => {
+    const paragraphs = [
+      makeText(
+        "Can be found at https://www.lesswrong.com/tag/some-tag. This should suffice to extract the link"
+      ).paragraph,
+    ];
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toEqual("This is a test");
+  });
+
+  it("calls getEAFTag for EAF tags", async () => {
+    const paragraphs = [
+      makeText(
+        "Check out this post on https://forum.effectivealtruism.org/topics/ea-fund"
+      ).paragraph,
+    ];
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toEqual("This is a test");
+  });
+
+  it("returns null for unknown tag URLs", async () => {
+    const paragraphs = [
+      makeText("Read up about this at https://bla.bla.com").paragraph,
+    ];
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toBeNull();
   });
 });
