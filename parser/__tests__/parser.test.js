@@ -86,6 +86,14 @@ describe("parsetextRun", () => {
     expect(parsetextRun(textRun)).toBe("[Google](https://www.google.com)");
   });
 
+    it("should format linked text which is empty", () => {
+        const textRun = {
+            content: "  ",
+            textStyle: { link: { url: "https://www.google.com" } },
+        };
+        expect(parsetextRun(textRun)).toBe("[  ](https://www.google.com)");
+    });
+
   it("should handle leading and trailing whitespace", () => {
     const textRun = {
       content: "  Hello World  ",
