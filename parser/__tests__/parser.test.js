@@ -545,4 +545,17 @@ describe("fetchExternalContent", () => {
     const result = await fetchExternalContent(paragraphs);
     expect(result).toBeNull();
   });
+
+  it("parses a document with a LessWrong tag and a related section", async () => {
+    const paragraphs = [
+      makeText("https://www.lesswrong.com/tag/some-tag").paragraph,
+      makeText("\n").paragraph,
+      makeText("  ").paragraph,
+      makeText("").paragraph,
+      { elements: [{}] },
+    ];
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toEqual("This is a test");
+  });
 });
