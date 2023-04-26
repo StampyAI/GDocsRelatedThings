@@ -39,13 +39,17 @@ export const getAnswers = async (tableURL) => {
     rows
       // There are some malformed rows in the table thanks to the Coda / GDocs pack. These are manually set to have a UI ID of -1 so we can filter them out
       .filter((row) => row.values[codaColumnIDs.UIID] !== "-1")
-      // And finally do some transformations to keep the data we use downstream and discard what we don't
+      // do some transformations to keep the data we use downstream and discard what we don't
       .map((row) => ({
         codaID: row.id,
         answerName: row.name,
         docID: getDocIDFromLink(row.values[codaColumnIDs.docURL]),
         ...row.values,
       }))
+      // The gdocs -> Coda integration also imports folders as new rows. So manually discard them here :/
+      .filter(
+        (row) => !["In progress", "Live on site"].includes(row.answerName)
+      )
   );
 };
 

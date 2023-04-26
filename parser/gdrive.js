@@ -1,8 +1,12 @@
 import { google } from "googleapis";
 import { JWT } from "google-auth-library";
 import fs from "fs";
+import { codaColumnIDs } from "./constants.js";
 
-const SCOPES = ["https://www.googleapis.com/auth/drive.readonly"];
+const SCOPES = [
+  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/drive.file",
+];
 
 const keyPath = "credentials.json";
 
@@ -56,71 +60,39 @@ export const getGoogleDoc = async (docId, docs) => {
   }
 };
 
-// const isParent = (file, folder) => {
-//   try {
-//     var folders = file.getParents()
-//     while (folders.hasNext()) {
-//       if (folders.next().getId() == folder.getId())
-//         return true
-//     }
-//   } catch (error) {
-//     console.error('could not check parents for', file.getName(), folder.getName(), error)
-//   }
-//   return false
-// }
-
 const folders = {
   "Live on site": "1feloLCiyc3XSxfaQ0L_fqVVsFMupw2JM",
   "In progress": "1U2h3Tte38EkOff9flwo6FKVZn8OhkNLW",
   Answers: "1XUTbO31BMSBBZLhwFsvPObnuMbVVd59H",
 };
 
-// const folders = {
-//   'Live on site': DriveApp.getFolderById('1feloLCiyc3XSxfaQ0L_fqVVsFMupw2JM'),
-//   'In progress': DriveApp.getFolderById('1U2h3Tte38EkOff9flwo6FKVZn8OhkNLW'),
-//   'Answers': DriveApp.getFolderById('1XUTbO31BMSBBZLhwFsvPObnuMbVVd59H'),
-// }
+export const moveAnswer = async (drive, answer) => {
+  const folderName =
+    answer[codaColumnIDs.status] == "Live on site"
+      ? "Live on site"
+      : "In progress";
+  const folder = folders[folderName];
 
-// const moveAnswer = (answer) => {
-//   var file;
-//   try {
-//     file = DriveApp.getFileById(answer.docID)
-//   } catch (error) {
-//     console.error('could not get file for', answer.answerName, error)
-//     return answer
-//   }
-//   if(file.getMimeType() !== 'application/vnd.google-apps.document')
-//     return answer
-
-//   const folder = answer[codaColumnIDs.status] == 'Live on site' ? folders['Live on site'] : folders['In progress']
-//   if (isParent(file, folders.Answers) && !isParent(file, folder)) {
-//     console.log('moving', answer.answerName, 'to', folder.getName())
-//     try {
-//       file.moveTo(folder)
-//     } catch (error) {
-//       console.error('could not move file:', error)
-//     }
-//   }
-//   return answer
-// }
-
-export const getFilesInFolder = async (folderId, drive) => {
-  const query = `'${folderId}' in parents and trashed = false`;
-  const files = [];
-  let nextPageToken = null;
-
-  do {
-    const params = {
-      q: query,
-      fields: "nextPageToken, files(id, name, mimeType)",
-    };
-    if (nextPageToken) {
-      params.pageToken = nextPageToken;
+  try {
+    const file = await drive.files.get({
+      fileId: answer.docID,
+      fields: "parents",
+    });
+    const { parents } = file.data;
+    if (!parents.includes(folder) || parents.includes(folders.Answers)) {
+      await drive.files.update({
+        fileId: answer.docID,
+        addParents: folder,
+        removeParents: parents.join(","),
+        fields: "id, parents",
+      });
+      console.info(
+        `Moved "${answer.answerName}" to "${folderName}" Gdocs folder`
+      );
     }
-    const res = await drive.files.list(params);
-    files.push(...res.data.files);
-    nextPageToken = res.data.nextPageToken;
-  } while (nextPageToken);
-
-  return files;
+  } catch (err) {
+    console.error(
+      `Error while checking if doc "${answer.answerName}" is in correct folder: ${err}`
+    );
+  }
 };
