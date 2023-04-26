@@ -72,6 +72,25 @@ describe("parsetextRun", () => {
     expect(parsetextRun(emptyRun)).toBe("");
   });
 
+  test.each([
+    [[0.1, 0.1, 0.1]],
+    [[0.2, 0.2, 0.2]],
+    [[0.3, 0.3, 0.3]],
+    [[0.4, 0.4, 0.4]],
+    [[0.5, 0.5, 0.5]],
+    // Try some with a bit of variance
+    [[0.5, 0.491, 0.501]],
+  ])(
+    "hould return empty string for grey text with rgbColor = %p",
+    (rgbColor) => {
+      const textRun = {
+        content: "bla bla bla",
+        textStyle: { foregroundColor: { color: { rgbColor } } },
+      };
+      expect(parsetextRun(textRun)).toBe("");
+    }
+  );
+
   it("should format bold text", () => {
     const textRun = { content: "Hello World", textStyle: { bold: true } };
     expect(parsetextRun(textRun)).toBe("**Hello World**");
