@@ -216,11 +216,15 @@ export const parseParagraph = (documentContext) => (paragraph) => {
 };
 
 const isGrey = (textStyle) => {
-  const rgb = textStyle?.foregroundColor?.color?.rgbColor;
-  const rgbVals = rgb && Object.values(rgb);
+  const { red, green, blue } =
+    textStyle?.foregroundColor?.color?.rgbColor || {};
   const tolerance = 0.01;
   return (
-    rgbVals && rgbVals.every((val) => Math.abs(val - rgbVals[0]) <= tolerance)
+    red &&
+    red > 0.02 &&
+    red < 0.98 &&
+    Math.abs(red - blue) <= tolerance &&
+    Math.abs(red - green) <= tolerance
   );
 };
 
