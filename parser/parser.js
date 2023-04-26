@@ -100,10 +100,13 @@ export const parseDoc = async (doc) => {
 
 // If the doc only contains one paragraph, whose first element which is a link to a LessWrong or EAF tag, do special things
 export const fetchExternalContent = async (paragraphs) => {
-  if (paragraphs.length !== 1 || !paragraphs[0].elements[0]?.textRun?.content)
+  const nonEmpty = paragraphs.filter(({ elements }) =>
+    elements.some((element) => (element?.textRun?.content?.trim() || "") !== "")
+  );
+  if (nonEmpty.length !== 1 || !nonEmpty[0].elements[0]?.textRun?.content)
     return null;
 
-  const text = paragraphs[0].elements[0].textRun.content;
+  const text = nonEmpty[0].elements[0].textRun.content;
 
   const tagHandlers = [
     [/https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/, getLWTag],

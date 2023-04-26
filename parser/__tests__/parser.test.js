@@ -37,7 +37,7 @@ describe("getTag", () => {
         tag: {
           result: {
             description: {
-              markdown: `This is a test ^[\\[123\\]](#fn0f5x8s34vee)^.
+              markdown: `This is an example LW tag content (see mockResponse) ^[\\[123\\]](#fn0f5x8s34vee)^.
 123.  ^**[^](#fnref0f5x8s34vee)**^\n    \n    And this is a footnote`,
             },
           },
@@ -49,7 +49,7 @@ describe("getTag", () => {
     const result = await getTag("https://bla.bla", "test");
 
     expect(result).toEqual(
-      "This is a test [^0f5x8s34vee].\n[^0f5x8s34vee]: And this is a footnote"
+      "This is an example LW tag content (see mockResponse) [^0f5x8s34vee].\n[^0f5x8s34vee]: And this is a footnote"
     );
   });
 
@@ -412,7 +412,7 @@ describe("parseDoc", () => {
       tag: {
         result: {
           description: {
-            markdown: `This is a test`,
+            markdown: `This is an example LW tag content (see mockResponse)`,
           },
         },
       },
@@ -429,7 +429,9 @@ describe("parseDoc", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await parseDoc(doc);
 
-    expect(result.md).toEqual("This is a test");
+    expect(result.md).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
 
@@ -444,7 +446,9 @@ describe("parseDoc", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await parseDoc(doc);
 
-    expect(result.md).toEqual("This is a test");
+    expect(result.md).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
 
@@ -462,7 +466,9 @@ describe("parseDoc", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await parseDoc(doc);
 
-    expect(result.md).toEqual("This is a test");
+    expect(result.md).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
 
@@ -497,7 +503,7 @@ describe("fetchExternalContent", () => {
       tag: {
         result: {
           description: {
-            markdown: `This is a test`,
+            markdown: `This is an example LW tag content (see mockResponse)`,
           },
         },
       },
@@ -524,7 +530,9 @@ describe("fetchExternalContent", () => {
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual("This is a test");
+    expect(result).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
   });
 
   it("calls getEAFTag for EAF tags", async () => {
@@ -535,7 +543,9 @@ describe("fetchExternalContent", () => {
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual("This is a test");
+    expect(result).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
   });
 
   it("returns null for unknown tag URLs", async () => {
@@ -544,5 +554,20 @@ describe("fetchExternalContent", () => {
     ];
     const result = await fetchExternalContent(paragraphs);
     expect(result).toBeNull();
+  });
+
+  it("parses a document with a LessWrong tag and a related section", async () => {
+    const paragraphs = [
+      makeText("https://www.lesswrong.com/tag/some-tag").paragraph,
+      makeText("\n").paragraph,
+      makeText("  ").paragraph,
+      makeText("").paragraph,
+      { elements: [{}] },
+    ];
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
   });
 });
