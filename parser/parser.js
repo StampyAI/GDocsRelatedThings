@@ -249,12 +249,14 @@ export const parsetextRun = ({ textStyle, content }) => {
 
   // This looks kinda weird but basically sometimes Google gives us a string like "THIS IS SOME BOLD TEXT " - notice the trailing space
   // Markdown doesn't handle **THIS IS SOME BOLD TEXT ** correctly so we need to move that whitespace outside of the formatting markers.
-  const leadingSpaceRegex = /^ */;
-  const trailingSpaceRegex = / *$/;
-  prefix = (content.match(leadingSpaceRegex)?.[0] || "") + prefix;
-  suffix = suffix + (content.match(trailingSpaceRegex)?.[0] || "");
-  text = text.trim();
-
+    // Though sometimes strings consisting of only spaces come, and those should be left alone.
+  if (content.trim() !== "") {
+    const leadingSpaceRegex = /^ */;
+    const trailingSpaceRegex = / *$/;
+    prefix = (content.match(leadingSpaceRegex)?.[0] || "") + prefix;
+    suffix = suffix + (content.match(trailingSpaceRegex)?.[0] || "");
+    text = text.trim();
+  }
   return prefix + text + suffix;
 };
 
