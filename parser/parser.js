@@ -1,4 +1,5 @@
-// TODO: test this function. Can't be bothered to now...
+const identity = (a) => a;
+
 export const parseDoc = async (doc) => {
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
@@ -37,91 +38,91 @@ export const parseDoc = async (doc) => {
   const relatedAnswerDocIDs =
     endOfContentPosition > -1
       ? related
-          .filter(
-            (block) =>
-              block.paragraph.elements[0].hasOwnProperty("richLink") ||
-              block.paragraph.elements[0].textRun?.textStyle.link?.url
+          .map((block) => block.paragraph.elements[0])
+          .map((block) =>
+            block.richLink
+              ? block?.richLink.richLinkProperties.uri
+              : block.textRun?.textStyle.link?.url
           )
-          .map((block) => {
-            if (block.paragraph.elements[0].richLink) {
-              return block.paragraph.elements[0].richLink.richLinkProperties
-                .uri;
-            } else {
-              return block.paragraph.elements[0].textRun?.textStyle.link?.url;
-            }
-          })
+          .filter(identity)
           .map(
             (uri) =>
               uri.match(
                 /https:\/\/docs.google.com\/document\/d\/([A-z0-9_-]+)/
               )?.[1] ?? null
           )
-          .filter((url) => url !== null)
+          .filter(identity)
       : [];
 
-  // If the doc only contains one paragraph, whose first element which is a link to a LessWrong or EAF tag, do special things
-  if (
-    paragraphs.length === 1 &&
-    paragraphs[0].elements[0].textRun?.content.match(
-      /https:\/\/(www.)?lesswrong.com\/tag\/[A-z0-9_-]+/
-    )
-  ) {
-    const match = paragraphs[0].elements[0].textRun?.content.match(
-      /https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/
-    );
-
-    const md = await getLWTag(match.groups.tagName);
-    return { md, relatedAnswerDocIDs };
-  } else if (
-    paragraphs.length === 1 &&
-    paragraphs[0].elements[0].textRun?.content.match(
-      /https:\/\/forum.effectivealtruism.org\/topics\/[A-z0-9_-]+/
-    )
-  ) {
-    const match = paragraphs[0].elements[0].textRun?.content.match(
-      /https:\/\/forum.effectivealtruism.org\/topics\/(?<tagName>[A-z0-9_-]+)/
-    );
-
-    const md = await getEAFTag(match.groups.tagName);
-    return { md, relatedAnswerDocIDs };
-  } else {
-    const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
-
-    const footnotes = Object.keys(documentContext.footnotes)
-      .map((fnID) => {
-        return (
-          `[^${fnID}]:` +
-          doc.footnotes[fnID].content
-            .map(({ paragraph }) => {
-              const { elements, ...paragraphContext } = paragraph;
-              return elements
-                .map(parseElement({ documentContext, paragraphContext }))
-                .join("");
-            })
-            .join("\n    ")
-        );
-      })
-      .join("\n");
-
-    const md = body + "\n\n" + footnotes;
-
-    // Take the maximum of each suggestion's insertions and deletions
-    // This helps replacements not seem ridiculously huge
-    const suggestions = documentContext.suggestions;
-    let suggestionSize = [...suggestions.entries()]
-      .map(([_, s], i, a) => Math.max(...Object.values(s)))
-      .reduce((size, acc) => acc + size, 0);
-    const debug = Object.fromEntries(suggestions.entries());
-
-    const ret = {
-      md,
-      relatedAnswerDocIDs,
-      suggestionCount: suggestions.size,
-      suggestionSize,
-    };
-
-    return ret;
+  // If the content is just a link to external content, fetch it and return it right away
+  const tagContent = await fetchExternalContent(paragraphs);
+  if (tagContent) {
+    return { md: tagContent, relatedAnswerDocIDs };
   }
+
+  const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
+
+  const footnotes = Object.keys(documentContext.footnotes)
+    .map((fnID) => {
+      return (
+        `[^${fnID}]:` +
+        doc.footnotes[fnID].content
+          .map(({ paragraph }) => {
+            const { elements, ...paragraphContext } = paragraph;
+            return elements
+              .map(parseElement({ documentContext, paragraphContext }))
+              .join("");
+          })
+          .join("\n    ")
+      );
+    })
+    .join("\n");
+
+  const md = body + "\n\n" + footnotes;
+
+  // Take the maximum of each suggestion's insertions and deletions
+  // This helps replacements not seem ridiculously huge
+  const suggestions = documentContext.suggestions;
+  let suggestionSize = [...suggestions.entries()]
+    .map(([_, s], i, a) => Math.max(...Object.values(s)))
+    .reduce((size, acc) => acc + size, 0);
+  const debug = Object.fromEntries(suggestions.entries());
+
+  const ret = {
+    md,
+    relatedAnswerDocIDs,
+    suggestionCount: suggestions.size,
+    suggestionSize,
+  };
+
+  return ret;
+};
+
+// If the doc only contains one paragraph, whose first element which is a link to a LessWrong or EAF tag, do special things
+export const fetchExternalContent = async (paragraphs) => {
+  const nonEmpty = paragraphs.filter(({ elements }) =>
+    elements.some((element) => (element?.textRun?.content?.trim() || "") !== "")
+  );
+  if (nonEmpty.length !== 1 || !nonEmpty[0].elements[0]?.textRun?.content)
+    return null;
+
+  const text = nonEmpty[0].elements[0].textRun.content;
+
+  const tagHandlers = [
+    [/https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/, getLWTag],
+    [
+      /https:\/\/forum.effectivealtruism.org\/topics\/(?<tagName>[A-z0-9_-]+)/,
+      getEAFTag,
+    ],
+  ];
+
+  for (const [regex, handler] of tagHandlers) {
+    const match = text.match(regex);
+    if (match) {
+      return await handler(match.groups.tagName);
+    }
+  }
+  return null;
 };
 
 export const getTag = async (host, tagName) => {

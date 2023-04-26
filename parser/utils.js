@@ -32,6 +32,7 @@ export const sendToDiscord = (
     ? process.env.DISCORD_ERROR // Goes to #stampy-error-log in Rob's Discord
     : process.env.DISCORD_FEED; // Goes to #wiki-feed in Rob's Discord
 
+  // Don't send anything if no url found - this makes Discord webhooks optional
   if (!url) return;
 
   const body = {
