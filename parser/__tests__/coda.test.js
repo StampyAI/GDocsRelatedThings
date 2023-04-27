@@ -168,6 +168,7 @@ describe("updateAnswer", () => {
       {
         method: "put",
         muteHttpExceptions: true,
+        timeout: 5000,
         headers: {
           "Content-Type": "application/json",
           Authorization: "Bearer fake-token",

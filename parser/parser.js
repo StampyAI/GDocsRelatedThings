@@ -129,7 +129,8 @@ export const getTag = async (host, tagName) => {
   const result = await fetch(
     encodeURI(
       `${host}/graphql?query={tag(input:{selector:{slug:"${tagName}"}}){result{description{markdown}}}}`
-    )
+    ),
+    { timeout: 5000 }
   );
   const contents = await result.json();
   const md = contents?.data?.tag?.result?.description?.markdown || "";

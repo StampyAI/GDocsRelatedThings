@@ -6,6 +6,7 @@ export const getDocIDFromLink = (docLink) =>
 
 const codaRequest = async (url, options = { headers: {} }) =>
   fetch(encodeURI(url), {
+    timeout: 5000,
     ...options,
     headers: {
       ...options.headers,
