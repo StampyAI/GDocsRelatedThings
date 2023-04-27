@@ -215,8 +215,21 @@ export const parseParagraph = (documentContext) => (paragraph) => {
   }
 };
 
+const isGrey = (textStyle) => {
+  const { red, green, blue } =
+    textStyle?.foregroundColor?.color?.rgbColor || {};
+  const tolerance = 0.01;
+  return (
+    red &&
+    red > 0.02 &&
+    red < 0.98 &&
+    Math.abs(red - blue) <= tolerance &&
+    Math.abs(red - green) <= tolerance
+  );
+};
+
 export const parsetextRun = ({ textStyle, content }) => {
-  if (content === "\n" || content.length === 0) {
+  if (content === "\n" || content.length === 0 || isGrey(textStyle)) {
     //  We add newlines into the markdown when joining all the segments up, so we don't need to keep pieces of text that are just newlines
     return "";
   }
