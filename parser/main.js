@@ -49,59 +49,58 @@ const saveAnswer = async (
   suggestionCount,
   suggestionSize
 ) => {
-  const response = await updateAnswer(
-    answer.codaID,
-    md,
-    relatedAnswerNames,
-    suggestionCount,
-    suggestionSize
-  );
+  let response;
+  try {
+    response = await updateAnswer(
+      answer.codaID,
+      md,
+      relatedAnswerNames,
+      suggestionCount,
+      suggestionSize
+    );
+  } catch (err) {
+    logError("Error while saving to Coda", answer, { message: err.cause });
+    return false;
+  }
 
   if (response.status === 202) {
-    console.log(
-      `Submitted update to Coda for answer "${answer.answerName}" with google doc ID ${answer.docID}`
-    );
-
-    const hasNewSuggestions =
-      (suggestionSize !== answer[codaColumnIDs.suggestionSize] ||
-        suggestionCount !== answer[codaColumnIDs.suggestionCount]) &&
-      (suggestionSize > 0 || suggestionCount > 0);
-
-    if (hasNewSuggestions) {
-      await sendToDiscord(
-        makeDiscordMessage(answer, suggestionCount, suggestionSize),
-        false
-      );
-    }
   } else if (response.status === 429) {
     // This is fine - Coda sometimes returns this, but later lets it through. It's not a problem
     // if an answer gets updated a bit later
   } else if (response.statusText.includes("Row edit of size")) {
-    await logError(`Markdown was too large for Coda at ${md.length} bytes`, {
-      answer,
-    });
+    await logError(
+      `Markdown was too large for Coda at ${md.length} bytes`,
+      answer
+    );
+    return false;
   } else {
     await logError(
       `HTTP ${response.status} response from Coda for "${answer.answerName}"`,
-      {
-        answer,
-      }
+      answer
     );
+    return false;
   }
+  return true;
 };
 
 const makeAnswerProcessor =
   (allAnswers, gdocsClient, gdriveClient) => async (answer) => {
     console.info(`-> ${answer.answerName}`);
-    const doc = await getGoogleDoc(answer.docID, gdocsClient);
+    const doc = await getGoogleDoc(answer, gdocsClient);
     if (!doc) {
       console.info(`skipping "${answer.answerName}"`);
-      return;
+      return false;
     }
     // At this point we have a huge blob of JSON that looks kinda like:
     // https://gist.github.com/ChrisRimmer/a2a702fe86b5251c235b22c8f4d0e2b4
-    let { md, relatedAnswerDocIDs, suggestionCount, suggestionSize } =
-      await parseDoc(doc);
+    let parsed;
+    try {
+      parsed = await parseDoc(doc);
+    } catch (err) {
+      logError("Error while parsing contents", answer, err);
+      return false;
+    }
+    let { md, relatedAnswerDocIDs, suggestionCount, suggestionSize } = parsed;
     md = compressMarkdown(md);
 
     // Keep only doc IDs which actually have matching answers
@@ -119,16 +118,17 @@ const makeAnswerProcessor =
         allAnswers.find((a) => a.docID === relatedAnswerDocID).answerName
     );
 
-    await saveAnswer(
+    const isSaved = await saveAnswer(
       answer,
       md,
       relatedAnswerNames,
       suggestionCount,
       suggestionSize
     );
+    if (!isSaved) return false;
 
     // Make sure the answer's document is in the correct folder
-    await moveAnswer(gdriveClient, answer);
+    return await moveAnswer(gdriveClient, answer);
   };
 
 const parseAllAnswerDocs = async () => {
@@ -137,23 +137,37 @@ const parseAllAnswerDocs = async () => {
 
   const gdocsClient = await getDocsClient();
   const gdriveClient = await getDriveClient();
+  const answerProcessor = makeAnswerProcessor(
+    allAnswers,
+    gdocsClient,
+    gdriveClient
+  );
 
-  allAnswers
+  const results = await allAnswers
     // .filter(({ answerName }) => answerName === "Example with all the formatting")  // Limiting the search for testing purposes
     // .filter((row) => row["c-Gr2GDh30nR"] != "Live on site")
     .filter((answer) => {
       const lastIngestDateString = answer[codaColumnIDs.lastIngested];
       const lastIngestDate = new Date(lastIngestDateString);
       const lastDocEditDate = new Date(answer[codaColumnIDs.docLastEdited]);
-
       return (
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
-        lastIngestDate < new Date("2023-02-11 15:00") // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
+        lastIngestDate < new Date("2023-04-27 22:00") // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
       );
     })
-    .forEach(makeAnswerProcessor(allAnswers, gdocsClient, gdriveClient));
+    // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
+    // too often. The `fetch()` is asynchronous, hence the magic with promises here
+    .reduce(async (previousPromise, answer) => {
+      const previousResults = await previousPromise;
+      return [...previousResults, await answerProcessor(answer)];
+    }, Promise.resolve([]));
+
+  return {
+    succeeded: results.filter((i) => i).length,
+    failed: results.filter((i) => !i).length,
+  };
 };
 
 export default parseAllAnswerDocs;

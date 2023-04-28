@@ -2,6 +2,7 @@ import { google } from "googleapis";
 import { JWT } from "google-auth-library";
 import fs from "fs";
 import { codaColumnIDs } from "./constants.js";
+import { logError } from "./utils.js";
 
 const SCOPES = [
   "https://www.googleapis.com/auth/drive.readonly",
@@ -45,17 +46,26 @@ export const getDocsClient = async () => {
   return google.docs({ version: "v1", auth });
 };
 
-export const getGoogleDoc = async (docId, docs) => {
+export const getGoogleDoc = async (answer, docs) => {
   try {
-    const result = await docs.documents.get({ documentId: docId });
+    const result = await docs.documents.get({ documentId: answer.docID });
     return result.data;
   } catch (err) {
     if (err?.response?.status == 400) {
-      console.error(
-        `Could not fetch doc ${docId}: ${err.response?.statusText}`
+      logError(
+        `Could not fetch doc ${answer.docID}: ${err.response?.statusText}`,
+        answer
       );
+    } else if (err?.response?.status == 403) {
+      logError(`Permission denied while fetching doc ${answer.docID}`, answer);
+    } else if (err?.response?.status == 429) {
+      logError(
+        `${err?.response.statusText} while fetching doc ${answer.docID}`,
+        answer
+      );
+      throw err;
     } else {
-      console.error(err);
+      logError(err, answer);
     }
   }
 };
@@ -79,11 +89,15 @@ export const moveAnswer = async (drive, answer) => {
       fields: "parents",
     });
     const { parents } = file.data;
-    if (!parents.includes(folder) || parents.includes(folders.Answers)) {
+    if (
+      !parents ||
+      !parents.includes(folder) ||
+      parents.includes(folders.Answers)
+    ) {
       await drive.files.update({
         fileId: answer.docID,
         addParents: folder,
-        removeParents: parents.join(","),
+        removeParents: parents ? parents.join(",") : "",
         fields: "id, parents",
       });
       console.info(
@@ -91,8 +105,11 @@ export const moveAnswer = async (drive, answer) => {
       );
     }
   } catch (err) {
-    console.error(
+    // Don't send these to Discord - they're not critical
+    console.log(
       `Error while checking if doc "${answer.answerName}" is in correct folder: ${err}`
     );
+    // return true;
   }
+  return true;
 };

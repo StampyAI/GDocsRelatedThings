@@ -56,20 +56,20 @@ export const sendToDiscord = (
   fetch(url, {
     method: "post",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+    body: JSON.stringify(body),
   });
 };
 
-export const logError = (msg, data) => {
-  console.error(msg);
+export const logError = (msg, answer, error) => {
+  console.error(msg, error?.message || "");
 
   let fields = {
     "Question being processed at time of error":
-      data?.data?.answer?.answerName || "Unknown",
+      answer?.answerName || "Unknown",
   };
 
-  if (data.errMsg) {
-    fields["Message"] = data.errMsg;
+  if (error?.message) {
+    fields["Message"] = error.message;
   }
 
   const messageContent = {
