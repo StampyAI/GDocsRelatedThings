@@ -18,4 +18,5 @@ export const codaColumnIDs = {
   suggestionCount: "c-sgnPwFMbn8",
   suggestionSize: "c-6DnuBdIZ02",
   UIID: "c-J0hTr2p6-T",
+  status: "c-Gr2GDh30nR",
 };
