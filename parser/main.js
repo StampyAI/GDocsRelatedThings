@@ -151,11 +151,14 @@ const parseAllAnswerDocs = async () => {
       const lastIngestDateString = answer[codaColumnIDs.lastIngested];
       const lastIngestDate = new Date(lastIngestDateString);
       const lastDocEditDate = new Date(answer[codaColumnIDs.docLastEdited]);
-      return (
+      const status = answer[codaColumnIDs.status];
+      const needsUpdate =
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
-        lastIngestDate < new Date("2023-05-07 01:00") // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
+        lastIngestDate < new Date("2023-04-27 22:00"); // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
+      return (
+        !["Withdrawn", "Marked for deletion"].includes(status) && needsUpdate
       );
     })
     // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
