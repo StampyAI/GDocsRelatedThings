@@ -74,8 +74,9 @@ const saveAnswer = async (
     );
     return false;
   } else {
+    const error = await response.json();
     await logError(
-      `HTTP ${response.status} response from Coda for "${answer.answerName}"`,
+      `HTTP ${response.status} response from Coda for "${answer.answerName}: ${error.message}"`,
       answer
     );
     return false;
@@ -154,7 +155,7 @@ const parseAllAnswerDocs = async () => {
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
-        lastIngestDate < new Date("2023-04-27 22:00") // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
+        lastIngestDate < new Date("2023-05-07 01:00") // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
       );
     })
     // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
