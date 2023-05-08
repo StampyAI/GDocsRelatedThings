@@ -1,10 +1,10 @@
-const identity = (a) => a;
+import escapeHtml from "escape-html";
 
 // Extract the whole contents of a paragraph block as a single string
 const extractBlockText = (block) =>
   block.paragraph?.elements
     .map((element) => element.textRun?.content)
-    .filter(identity)
+    .filter(Boolean)
     .map((text) => text.trim())
     .join("");
 
@@ -52,14 +52,14 @@ export const parseDoc = async (doc) => {
               ? block?.richLink.richLinkProperties.uri
               : block.textRun?.textStyle.link?.url
           )
-          .filter(identity)
+          .filter(Boolean)
           .map(
             (uri) =>
               uri.match(
                 /https:\/\/docs.google.com\/document\/d\/([A-z0-9_-]+)/
               )?.[1] ?? null
           )
-          .filter(identity)
+          .filter(Boolean)
       : [];
 
   // If the content is just a link to external content, fetch it and return it right away
@@ -282,6 +282,12 @@ export const parsetextRun = ({ textStyle, content }) => {
     prefix = (content.match(leadingSpaceRegex)?.[0] || "") + prefix;
     suffix = suffix + (content.match(trailingSpaceRegex)?.[0] || "");
     text = text.trim();
+    // Escape HTML, but only if the line doesn't look like a block quote. Markdown blockquotes start with a '>', which would be escaped away.
+    // This of course means that a multiline HTML tag might not get escaped properly... The hope is that people avoid using raw HTML in docs
+    // which would make this issue moot. Unless someone wants to quote HTML for some reason.
+    if (text.search(/^\s*>/) === -1) {
+      text = escapeHtml(text);
+    }
   }
   return prefix + text + suffix;
 };
