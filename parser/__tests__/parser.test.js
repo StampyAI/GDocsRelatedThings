@@ -73,7 +73,7 @@ describe("parsetextRun", () => {
   });
 
   it.each([
-    [{ red: 0.3, green: 0.3, blue: 0.3 }],
+    [{ red: 0.31, green: 0.31, blue: 0.31 }],
     [{ red: 0.4, green: 0.4, blue: 0.4 }],
     [{ red: 0.5, green: 0.5, blue: 0.5 }],
     // Try some with a bit of variance

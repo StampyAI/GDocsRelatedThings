@@ -230,8 +230,8 @@ const isGrey = (textStyle) => {
   const tolerance = 0.01;
   return (
     red &&
-    red > 0.02 &&
-    red < 0.98 &&
+    red > 0.3 &&
+    red < 0.93 &&
     Math.abs(red - blue) <= tolerance &&
     Math.abs(red - green) <= tolerance
   );
