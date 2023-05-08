@@ -1,4 +1,12 @@
-const identity = (a) => a;
+import escapeHtml from "escape-html";
+
+// Extract the whole contents of a paragraph block as a single string
+const extractBlockText = (block) =>
+  block.paragraph?.elements
+    .map((element) => element.textRun?.content)
+    .filter(Boolean)
+    .map((text) => text.trim())
+    .join("");
 
 export const parseDoc = async (doc) => {
   // contextual information about the doc that is sometimes useful
@@ -13,7 +21,7 @@ export const parseDoc = async (doc) => {
 
   // Finding the position of the related marker - it's a paragraph with only one element whose text content is the word "Related"
   const endOfContentPosition = doc.body.content.findIndex(
-    (block) => block.paragraph?.elements[0].textRun?.content === "Related\n"
+    (block) => extractBlockText(block) === "Related"
   );
 
   // Everything up to but not including the "Related" marker is considered answer text
@@ -44,14 +52,14 @@ export const parseDoc = async (doc) => {
               ? block?.richLink.richLinkProperties.uri
               : block.textRun?.textStyle.link?.url
           )
-          .filter(identity)
+          .filter(Boolean)
           .map(
             (uri) =>
               uri.match(
                 /https:\/\/docs.google.com\/document\/d\/([A-z0-9_-]+)/
               )?.[1] ?? null
           )
-          .filter(identity)
+          .filter(Boolean)
       : [];
 
   // If the content is just a link to external content, fetch it and return it right away
@@ -222,8 +230,8 @@ const isGrey = (textStyle) => {
   const tolerance = 0.01;
   return (
     red &&
-    red > 0.02 &&
-    red < 0.98 &&
+    red > 0.3 &&
+    red < 0.93 &&
     Math.abs(red - blue) <= tolerance &&
     Math.abs(red - green) <= tolerance
   );
@@ -247,16 +255,19 @@ export const parsetextRun = ({ textStyle, content }) => {
   let prefix = "";
   let suffix = "";
 
-  if (isType("bold")) {
-    prefix += "**";
-    suffix += "**";
+  if (content.trim() !== "") {
+    if (isType("bold")) {
+      prefix += "**";
+      suffix += "**";
+    }
+
+    if (isType("italic")) {
+      prefix += "*";
+      suffix += "*";
+    }
   }
 
-  if (isType("italic")) {
-    prefix += "*";
-    suffix += "*";
-  }
-
+  // Allow links that are have whitespace as their label. Probably a typo if happens, but they do happen
   if (isType("link")) {
     prefix += "[";
     suffix = `](${textStyle.link.url})` + suffix;
@@ -271,6 +282,12 @@ export const parsetextRun = ({ textStyle, content }) => {
     prefix = (content.match(leadingSpaceRegex)?.[0] || "") + prefix;
     suffix = suffix + (content.match(trailingSpaceRegex)?.[0] || "");
     text = text.trim();
+    // Escape HTML, but only if the line doesn't look like a block quote. Markdown blockquotes start with a '>', which would be escaped away.
+    // This of course means that a multiline HTML tag might not get escaped properly... The hope is that people avoid using raw HTML in docs
+    // which would make this issue moot. Unless someone wants to quote HTML for some reason.
+    if (text.search(/^\s*>/) === -1) {
+      text = escapeHtml(text);
+    }
   }
   return prefix + text + suffix;
 };
