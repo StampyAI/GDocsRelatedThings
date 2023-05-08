@@ -255,16 +255,19 @@ export const parsetextRun = ({ textStyle, content }) => {
   let prefix = "";
   let suffix = "";
 
-  if (isType("bold")) {
-    prefix += "**";
-    suffix += "**";
+  if (content.trim() !== "") {
+    if (isType("bold")) {
+      prefix += "**";
+      suffix += "**";
+    }
+
+    if (isType("italic")) {
+      prefix += "*";
+      suffix += "*";
+    }
   }
 
-  if (isType("italic")) {
-    prefix += "*";
-    suffix += "*";
-  }
-
+  // Allow links that are have whitespace as their label. Probably a typo if happens, but they do happen
   if (isType("link")) {
     prefix += "[";
     suffix = `](${textStyle.link.url})` + suffix;
