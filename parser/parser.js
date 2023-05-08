@@ -1,5 +1,13 @@
 const identity = (a) => a;
 
+// Extract the whole contents of a paragraph block as a single string
+const extractBlockText = (block) =>
+  block.paragraph?.elements
+    .map((element) => element.textRun?.content)
+    .filter(identity)
+    .map((text) => text.trim())
+    .join("");
+
 export const parseDoc = async (doc) => {
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
@@ -13,7 +21,7 @@ export const parseDoc = async (doc) => {
 
   // Finding the position of the related marker - it's a paragraph with only one element whose text content is the word "Related"
   const endOfContentPosition = doc.body.content.findIndex(
-    (block) => block.paragraph?.elements[0].textRun?.content === "Related\n"
+    (block) => extractBlockText(block) === "Related"
   );
 
   // Everything up to but not including the "Related" marker is considered answer text

@@ -402,6 +402,28 @@ describe("parseDoc", () => {
     expect(result.suggestionSize).toEqual(0);
   });
 
+  it("handles non standard related blocks", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          makeText("    \n\n    Related    \n"),
+          makeLink("https://docs.google.com/document/d/123"),
+          makeText("This will be ignored"),
+          makeText("This too will be ignored"),
+        ],
+      },
+      footnotes: {},
+      lists: {},
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.relatedAnswerDocIDs).toEqual(["123"]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
   it("ignores things that aren't paragraphs", async () => {
     const doc = {
       body: {
