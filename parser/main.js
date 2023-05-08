@@ -156,7 +156,7 @@ const parseAllAnswerDocs = async () => {
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
-        lastIngestDate < new Date("2023-05-08 22:00"); // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
+        lastIngestDate < new Date("2023-05-08 10:00"); // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
       return (
         !["Withdrawn", "Marked for deletion"].includes(status) && needsUpdate
       );
