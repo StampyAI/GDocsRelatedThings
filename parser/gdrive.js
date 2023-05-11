@@ -70,6 +70,37 @@ export const getGoogleDoc = async (answer, docs) => {
   }
 };
 
+export const getGoogleDocComments = async (answer, drive) => {
+  try {
+    const comments = await drive.comments.list({
+      fileId: answer.docID,
+      fields: "*",
+      includeDeleted: false,
+    });
+    return comments.data;
+  } catch (err) {
+    if (err?.response?.status == 400) {
+      logError(
+        `Could not fetch comments for ${answer.docID}: ${err.response?.statusText}`,
+        answer
+      );
+    } else if (err?.response?.status == 403) {
+      logError(
+        `Permission denied while fetching comments of doc ${answer.docID}`,
+        answer
+      );
+    } else if (err?.response?.status == 429) {
+      logError(
+        `${err?.response.statusText} while fetching comments of doc ${answer.docID}`,
+        answer
+      );
+      throw err;
+    } else {
+      logError(err, answer);
+    }
+  }
+};
+
 const folders = {
   "Live on site": "1feloLCiyc3XSxfaQ0L_fqVVsFMupw2JM",
   "In progress": "1U2h3Tte38EkOff9flwo6FKVZn8OhkNLW",

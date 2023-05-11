@@ -59,7 +59,8 @@ export const updateAnswer = async (
   md,
   relatedAnswerNames,
   suggestionCount,
-  suggestionSize
+  suggestionSize,
+  commentsCount
 ) => {
   const rowURL = `${tableURL}/rows/${id}`;
   const payload = {
@@ -84,6 +85,10 @@ export const updateAnswer = async (
         {
           column: codaColumnIDs.preexistingSuggestionSize,
           value: suggestionSize,
+        },
+        {
+          column: codaColumnIDs.commentsCount,
+          value: commentsCount,
         },
       ],
     },

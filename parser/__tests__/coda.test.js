@@ -123,6 +123,7 @@ describe("updateAnswer", () => {
     const relatedAnswerNames = ["Answer 1", "Answer 2"];
     const suggestionCount = 5;
     const suggestionSize = 10;
+    const commentsCount = 0;
     const mockDate = new Date("2022-01-01T00:00:00.000Z");
     jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
@@ -149,6 +150,10 @@ describe("updateAnswer", () => {
             column: codaColumnIDs.preexistingSuggestionSize,
             value: suggestionSize,
           },
+          {
+            column: codaColumnIDs.commentsCount,
+            value: commentsCount,
+          },
         ],
       },
     });
@@ -160,7 +165,8 @@ describe("updateAnswer", () => {
       md,
       relatedAnswerNames,
       suggestionCount,
-      suggestionSize
+      suggestionSize,
+      commentsCount
     );
 
     expect(fetch.mock.calls[0]).toEqual([
