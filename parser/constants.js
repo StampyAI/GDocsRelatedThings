@@ -20,4 +20,5 @@ export const codaColumnIDs = {
   UIID: "c-J0hTr2p6-T",
   status: "c-Gr2GDh30nR",
   commentsCount: "c-kakZoTgC9y",
+  alternativePhrasings: "c-bLWz7lnXHG",
 };

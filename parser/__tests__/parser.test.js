@@ -424,6 +424,58 @@ describe("parseDoc", () => {
     expect(result.suggestionSize).toEqual(0);
   });
 
+  it("handles alternative phrasings", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          makeText("    \n\n    Alternative phrasings    \n"),
+          makeText("some other way of saying things"),
+          makeText("bla bla bla"),
+        ],
+      },
+      footnotes: {},
+      lists: {},
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.alternativePhrasings).toEqual([
+      "some other way of saying things",
+      "bla bla bla",
+    ]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
+  it("handles alternative phrasings even when after related section", async () => {
+    const doc = {
+      body: {
+        content: [
+          makeText("This is some text"),
+          makeText("    \n\n    Related    \n"),
+          makeLink("https://docs.google.com/document/d/123"),
+          makeText("This will be ignored"),
+          makeText("    \n\n    Alternative phrasings    \n"),
+          makeText("some other way of saying things"),
+          makeText("bla bla bla"),
+        ],
+      },
+      footnotes: {},
+      lists: {},
+    };
+    const result = await parseDoc(doc);
+
+    expect(result.md).toEqual("This is some text\n\n");
+    expect(result.relatedAnswerDocIDs).toEqual(["123"]);
+    expect(result.alternativePhrasings).toEqual([
+      "some other way of saying things",
+      "bla bla bla",
+    ]);
+    expect(result.suggestionCount).toEqual(0);
+    expect(result.suggestionSize).toEqual(0);
+  });
+
   it("ignores things that aren't paragraphs", async () => {
     const doc = {
       body: {

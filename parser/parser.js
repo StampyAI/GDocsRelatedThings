@@ -8,6 +8,71 @@ const extractBlockText = (block) =>
     .map((text) => text.trim())
     .join("");
 
+const extractFootnotes = (documentContext, doc) =>
+  Object.keys(documentContext.footnotes)
+    .map(
+      (fnID) =>
+        `[^${fnID}]:` +
+        doc.footnotes[fnID].content
+          .map(({ paragraph }) => {
+            const { elements, ...paragraphContext } = paragraph;
+            return elements
+              .map(parseElement({ documentContext, paragraphContext }))
+              .join("");
+          })
+          .join("\n    ")
+    )
+    .join("\n");
+
+const extractRelatedAnswerIDs = (blocks) => {
+  // This gets a little messy because we may have related answers referenced with either rich "chip" links or plain text links
+  return blocks
+    .map((block) => block.paragraph.elements[0])
+    .map((block) =>
+      block.richLink
+        ? block?.richLink.richLinkProperties.uri
+        : block.textRun?.textStyle.link?.url
+    )
+    .filter(Boolean)
+    .map(
+      (uri) =>
+        uri.match(
+          /https:\/\/docs.google.com\/document\/d\/([A-z0-9_-]+)/
+        )?.[1] ?? null
+    )
+    .filter(Boolean);
+};
+
+const extractAllParagraphs = (blocks) =>
+  blocks
+    .filter((block) => Object.keys(block).includes("paragraph"))
+    .map((b) => b.paragraph);
+
+const extractDocParts = (doc) => {
+  const blocks = doc.body.content.reduce(
+    (context, block) => {
+      const text = extractBlockText(block);
+      if (text == "Related") {
+        context.contentType = "metablocks";
+      } else if (text == "Alternative phrasings") {
+        context.contentType = "alternatives";
+      } else {
+        context[context.contentType].push(block);
+      }
+      return context;
+    },
+    { content: [], metablocks: [], alternatives: [], contentType: "content" }
+  );
+
+  return {
+    paragraphs: extractAllParagraphs(blocks.content),
+    relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.metablocks),
+    alternativePhrasings: blocks.alternatives
+      .map(extractBlockText)
+      .filter(Boolean),
+  };
+};
+
 export const parseDoc = async (doc) => {
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
@@ -18,73 +83,18 @@ export const parseDoc = async (doc) => {
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
   };
-
-  // Finding the position of the related marker - it's a paragraph with only one element whose text content is the word "Related"
-  const endOfContentPosition = doc.body.content.findIndex(
-    (block) => extractBlockText(block) === "Related"
-  );
-
-  // Everything up to but not including the "Related" marker is considered answer text
-  const answerBody =
-    endOfContentPosition === -1
-      ? doc.body.content
-      : doc.body.content.slice(0, endOfContentPosition);
-  // Everything after it is related answers
-  const related =
-    endOfContentPosition === -1
-      ? []
-      : doc.body.content.slice(endOfContentPosition + 1);
-
-  // Discard everything that doesn't contain a "paragraph", and is before the "Related" boundary
-  // Everything we care about preserving is inside a paragraph, and everything that's after the "Related" marker is basically metadata
-  const paragraphs = answerBody
-    // Grabbing just content that contains paragraphs
-    .filter((block) => Object.keys(block).includes("paragraph"))
-    .map((b) => b.paragraph);
-
-  // This gets a little messy because we may have related answers referenced with either rich "chip" links or plain text links
-  const relatedAnswerDocIDs =
-    endOfContentPosition > -1
-      ? related
-          .map((block) => block.paragraph.elements[0])
-          .map((block) =>
-            block.richLink
-              ? block?.richLink.richLinkProperties.uri
-              : block.textRun?.textStyle.link?.url
-          )
-          .filter(Boolean)
-          .map(
-            (uri) =>
-              uri.match(
-                /https:\/\/docs.google.com\/document\/d\/([A-z0-9_-]+)/
-              )?.[1] ?? null
-          )
-          .filter(Boolean)
-      : [];
+  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings } =
+    extractDocParts(doc);
 
   // If the content is just a link to external content, fetch it and return it right away
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
-    return { md: tagContent, relatedAnswerDocIDs };
+    return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
   const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
 
-  const footnotes = Object.keys(documentContext.footnotes)
-    .map((fnID) => {
-      return (
-        `[^${fnID}]:` +
-        doc.footnotes[fnID].content
-          .map(({ paragraph }) => {
-            const { elements, ...paragraphContext } = paragraph;
-            return elements
-              .map(parseElement({ documentContext, paragraphContext }))
-              .join("");
-          })
-          .join("\n    ")
-      );
-    })
-    .join("\n");
+  const footnotes = extractFootnotes(documentContext, doc);
 
   const md = body + "\n\n" + footnotes;
 
@@ -99,6 +109,7 @@ export const parseDoc = async (doc) => {
   const ret = {
     md,
     relatedAnswerDocIDs,
+    alternativePhrasings,
     suggestionCount: suggestions.size,
     suggestionSize,
   };

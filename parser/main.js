@@ -71,7 +71,8 @@ const saveAnswer = async (
   relatedAnswerNames,
   suggestionCount,
   suggestionSize,
-  commentsCount
+  commentsCount,
+  alternativePhrasings
 ) => {
   let response;
   try {
@@ -81,7 +82,8 @@ const saveAnswer = async (
       relatedAnswerNames,
       suggestionCount,
       suggestionSize,
-      commentsCount
+      commentsCount,
+      alternativePhrasings
     );
   } catch (err) {
     logError("Error while saving to Coda", answer, { message: err.cause });
@@ -144,7 +146,13 @@ const makeAnswerProcessor =
       logError("Error while parsing contents", answer, err);
       return false;
     }
-    let { md, relatedAnswerDocIDs, suggestionCount, suggestionSize } = parsed;
+    let {
+      md,
+      relatedAnswerDocIDs,
+      suggestionCount,
+      suggestionSize,
+      alternativePhrasings,
+    } = parsed;
     md = compressMarkdown(md);
 
     // Keep only doc IDs which actually have matching answers
@@ -156,6 +164,13 @@ const makeAnswerProcessor =
         });
       }
     );
+    const uniqueAlternatives = [
+      ...new Set(
+        alternativePhrasings.concat(
+          (answer[codaColumnIDs.alternativePhrasings] || "").split("\n")
+        )
+      ),
+    ].map((i) => i.trim());
 
     const relatedAnswerNames = validRelatedAnswers.map(
       (relatedAnswerDocID) =>
@@ -172,7 +187,8 @@ const makeAnswerProcessor =
       relatedAnswerNames,
       suggestionCount,
       suggestionSize,
-      commentsCount
+      commentsCount,
+      uniqueAlternatives
     );
     if (!isSaved) return false;
 
