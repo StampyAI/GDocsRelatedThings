@@ -123,6 +123,8 @@ describe("updateAnswer", () => {
     const relatedAnswerNames = ["Answer 1", "Answer 2"];
     const suggestionCount = 5;
     const suggestionSize = 10;
+    const commentsCount = 0;
+    const alternativePhrasings = ["this is a different way", "as is this"];
     const mockDate = new Date("2022-01-01T00:00:00.000Z");
     jest.spyOn(global, "Date").mockImplementation(() => mockDate);
 
@@ -149,6 +151,14 @@ describe("updateAnswer", () => {
             column: codaColumnIDs.preexistingSuggestionSize,
             value: suggestionSize,
           },
+          {
+            column: codaColumnIDs.commentsCount,
+            value: commentsCount,
+          },
+          {
+            column: codaColumnIDs.alternativePhrasings,
+            value: alternativePhrasings.join("\n"),
+          },
         ],
       },
     });
@@ -160,7 +170,9 @@ describe("updateAnswer", () => {
       md,
       relatedAnswerNames,
       suggestionCount,
-      suggestionSize
+      suggestionSize,
+      commentsCount,
+      alternativePhrasings
     );
 
     expect(fetch.mock.calls[0]).toEqual([
@@ -184,13 +196,21 @@ describe("updateAnswer", () => {
     const relatedAnswerNames = ["Answer 1", "Answer 2"];
     const suggestionCount = 5;
     const suggestionSize = 10;
+    const alternativePhrasings = ["this is a different way", "as is this"];
 
     const expectedError = new Error("Failed to update answer");
 
     fetch.mockRejectOnce(expectedError);
 
     await expect(
-      updateAnswer(id, md, relatedAnswerNames, suggestionCount, suggestionSize)
+      updateAnswer(
+        id,
+        md,
+        relatedAnswerNames,
+        suggestionCount,
+        suggestionSize,
+        alternativePhrasings
+      )
     ).rejects.toEqual(expectedError);
   });
 });

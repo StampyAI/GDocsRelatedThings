@@ -5,6 +5,7 @@ import {
   getDocsClient,
   getDriveClient,
   getGoogleDoc,
+  getGoogleDocComments,
   moveAnswer,
 } from "./gdrive.js";
 import {
@@ -16,38 +17,62 @@ import {
   codaColumnIDs,
 } from "./constants.js";
 
-const makeDiscordMessage = (answer, suggestionCount, suggestionSize) => ({
-  content: `There ${
-    suggestionCount > 1 ? "are" : "is"
-  } ${suggestionCount} open suggestion${
-    suggestionCount > 1 ? "s" : ""
-  } on the Google Doc for the question "${
+const makeDiscordMessage = (
+  answer,
+  suggestionCount,
+  suggestionSize,
+  commentsCount
+) => {
+  const updateTypes = [];
+  const fields = {};
+
+  const pluralise = (text, count) =>
+    `${count > 1 ? "are" : "is"} ${count} ${text}${count > 1 ? "s" : ""}`;
+
+  if (suggestionCount > 0) {
+    updateTypes.push(pluralise("open suggestion", suggestionCount));
+
+    fields["Number of suggestions"] = `Was ${
+      answer[codaColumnIDs.suggestionCount] || 0
+    }, now ${suggestionCount}`;
+    fields["Total size of suggestions"] = `Was ${
+      answer[codaColumnIDs.suggestionSize] || 0
+    }, now ${suggestionSize}`;
+  }
+  if (commentsCount > 0) {
+    updateTypes.push(pluralise("unresolved comment", commentsCount));
+
+    fields["Number of unresolved comments"] = commentsCount || 0;
+  }
+
+  const content = `There ${updateTypes.join(
+    " and "
+  )} on the Google Doc for the question "${
     answer.answerName
   }" - does anyone have a minute to review ${
     suggestionCount > 1 ? "them" : "it"
-  }?`,
-  embeds: [
-    {
-      title: answer.answerName,
-      url: answer[codaColumnIDs.docURL],
-      fields: {
-        "Number of suggestions": `Was ${
-          answer[codaColumnIDs.suggestionCount] || 0
-        }, now ${suggestionCount}`,
-        "Total size of suggestions": `Was ${
-          answer[codaColumnIDs.suggestionSize] || 0
-        }, now ${suggestionSize}`,
+  }?`;
+
+  return {
+    content,
+    embeds: [
+      {
+        title: answer.answerName,
+        url: answer[codaColumnIDs.docURL],
+        fields,
       },
-    },
-  ],
-});
+    ],
+  };
+};
 
 const saveAnswer = async (
   answer,
   md,
   relatedAnswerNames,
   suggestionCount,
-  suggestionSize
+  suggestionSize,
+  commentsCount,
+  alternativePhrasings
 ) => {
   let response;
   try {
@@ -56,7 +81,9 @@ const saveAnswer = async (
       md,
       relatedAnswerNames,
       suggestionCount,
-      suggestionSize
+      suggestionSize,
+      commentsCount,
+      alternativePhrasings
     );
   } catch (err) {
     logError("Error while saving to Coda", answer, { message: err.cause });
@@ -64,6 +91,24 @@ const saveAnswer = async (
   }
 
   if (response.status === 202) {
+    const hasNewSuggestions =
+      (suggestionSize !== answer[codaColumnIDs.suggestionSize] ||
+        suggestionCount !== answer[codaColumnIDs.suggestionCount]) &&
+      (suggestionSize > 0 || suggestionCount > 0);
+    const hasNewComments =
+      commentsCount != answer[codaColumnIDs.commentsCount] && commentsCount > 0;
+
+    if (hasNewSuggestions || hasNewComments) {
+      await sendToDiscord(
+        makeDiscordMessage(
+          answer,
+          suggestionCount,
+          suggestionSize,
+          commentsCount
+        ),
+        false
+      );
+    }
   } else if (response.status === 429) {
     // This is fine - Coda sometimes returns this, but later lets it through. It's not a problem
     // if an answer gets updated a bit later
@@ -101,7 +146,13 @@ const makeAnswerProcessor =
       logError("Error while parsing contents", answer, err);
       return false;
     }
-    let { md, relatedAnswerDocIDs, suggestionCount, suggestionSize } = parsed;
+    let {
+      md,
+      relatedAnswerDocIDs,
+      suggestionCount,
+      suggestionSize,
+      alternativePhrasings,
+    } = parsed;
     md = compressMarkdown(md);
 
     // Keep only doc IDs which actually have matching answers
@@ -113,18 +164,31 @@ const makeAnswerProcessor =
         });
       }
     );
+    const uniqueAlternatives = [
+      ...new Set(
+        alternativePhrasings.concat(
+          (answer[codaColumnIDs.alternativePhrasings] || "").split("\n")
+        )
+      ),
+    ].map((i) => i.trim());
 
     const relatedAnswerNames = validRelatedAnswers.map(
       (relatedAnswerDocID) =>
         allAnswers.find((a) => a.docID === relatedAnswerDocID).answerName
     );
 
+    const comments = await getGoogleDocComments(answer, gdriveClient);
+    const commentsCount =
+      comments?.comments?.filter((c) => !c.resolved).length || 0;
+
     const isSaved = await saveAnswer(
       answer,
       md,
       relatedAnswerNames,
       suggestionCount,
-      suggestionSize
+      suggestionSize,
+      commentsCount,
+      uniqueAlternatives
     );
     if (!isSaved) return false;
 
