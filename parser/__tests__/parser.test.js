@@ -590,6 +590,18 @@ describe("fetchExternalContent", () => {
     expect(result).toBeNull();
   });
 
+  it("returns null when multiple paragraphs provided", async () => {
+    const paragraphs = [
+      makeText("This will not fetch https://www.lesswrong.com/tag/some-tag.")
+        .paragraph,
+      makeText(
+        "Having additional paragraphs means that the contents should be shown, rather than fetching stuff from LW"
+      ).paragraph,
+    ];
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toBeNull();
+  });
+
   it("calls getLWTag for lesswrong.com tags", async () => {
     const paragraphs = [
       makeText(
@@ -631,6 +643,41 @@ describe("fetchExternalContent", () => {
       makeText("  ").paragraph,
       makeText("").paragraph,
       { elements: [{}] },
+    ];
+    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    const result = await fetchExternalContent(paragraphs);
+    expect(result).toEqual(
+      "This is an example LW tag content (see mockResponse)"
+    );
+  });
+
+  it("ignores comments and suggested edits", async () => {
+    const paragraphs = [
+      makeText("https://www.lesswrong.com/tag/some-tag").paragraph,
+      {
+        elements: [
+          {
+            textRun: {
+              content: "This is a suggested change",
+              textStyle: {},
+              suggestedInsertionIds: ["suggest.wxvy2fk80chl"],
+            },
+          },
+        ],
+        paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+      },
+      {
+        elements: [
+          {
+            textRun: {
+              content: "This is a different suggested change",
+              textStyle: {},
+              suggestedInsertionIds: ["suggest.sadasdasd"],
+            },
+          },
+        ],
+        paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+      },
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);

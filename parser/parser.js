@@ -109,7 +109,11 @@ export const parseDoc = async (doc) => {
 // If the doc only contains one paragraph, whose first element which is a link to a LessWrong or EAF tag, do special things
 export const fetchExternalContent = async (paragraphs) => {
   const nonEmpty = paragraphs.filter(({ elements }) =>
-    elements.some((element) => (element?.textRun?.content?.trim() || "") !== "")
+    elements.some(
+      (element) =>
+        (element?.textRun?.content?.trim() || "") !== "" &&
+        !element?.textRun?.suggestedInsertionIds
+    )
   );
   if (nonEmpty.length !== 1 || !nonEmpty[0].elements[0]?.textRun?.content)
     return null;
