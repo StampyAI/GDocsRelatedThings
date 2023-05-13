@@ -5,7 +5,7 @@ import { codaColumnIDs } from "./constants.js";
 import { logError } from "./utils.js";
 
 const SCOPES = [
-  "https://www.googleapis.com/auth/drive.readonly",
+  "https://www.googleapis.com/auth/drive",
   "https://www.googleapis.com/auth/drive.file",
 ];
 
@@ -119,7 +119,7 @@ export const moveAnswer = async (drive, answer) => {
       fileId: answer.docID,
       fields: "parents",
     });
-    const { parents } = file.data;
+    const parents = file.data?.parents;
     if (
       !parents ||
       !parents.includes(folder) ||
