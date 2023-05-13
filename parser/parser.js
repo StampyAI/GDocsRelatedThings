@@ -54,7 +54,7 @@ const extractDocParts = (doc) => {
       const text = extractBlockText(block);
       if (text == "Related") {
         context.contentType = "metablocks";
-      } else if (text == "Alternative phrasings") {
+      } else if (["Alternative phrasings", "Alternate phrasings"].includes(text)) {
         context.contentType = "alternatives";
       } else {
         context[context.contentType].push(block);
