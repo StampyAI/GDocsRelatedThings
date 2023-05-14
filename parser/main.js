@@ -240,7 +240,12 @@ const parseAllAnswerDocs = async () => {
     // too often. The `fetch()` is asynchronous, hence the magic with promises here
     .reduce(async (previousPromise, answer) => {
       const previousResults = await previousPromise;
-      return [...previousResults, await answerProcessor(answer)];
+      try {
+        return [...previousResults, await answerProcessor(answer)];
+      } catch (err) {
+        console.error(err);
+        return [...previousResults, false];
+      }
     }, Promise.resolve([]));
 
   return {
