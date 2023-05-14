@@ -13,8 +13,8 @@ on:
       description: 'Whether to force a reparse of all answers'
       type: choice
       options:
-      - true
-      - false
+        - true
+        - false
 
 env:
   CODA_TOKEN: ${{ secrets.CODA_TOKEN }}
