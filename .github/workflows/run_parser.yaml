@@ -1,4 +1,9 @@
 name: Run parser
+inputs:
+  force-parse:
+    description: 'Whether to force a reparse of all answers'
+    required: false
+    default: 'false'
 
 on:
   schedule:
@@ -33,4 +38,4 @@ jobs:
       run: npm install
 
     - name: Run the parser
-      run: node bin/importContent.js
+      run: PARSE_ALL=${{inputs.force-parse}} node bin/importContent.js

@@ -129,6 +129,16 @@ const saveAnswer = async (
   return true;
 };
 
+const replaceGdocLinks = (md, allAnswers) =>
+  allAnswers.reduce(
+    (md, answer) =>
+      md.replaceAll(
+        answer[codaColumnIDs.docURL],
+        `/?state=${answer[codaColumnIDs.UIID]}`
+      ),
+    md
+  );
+
 const makeAnswerProcessor =
   (allAnswers, gdocsClient, gdriveClient) => async (answer) => {
     console.info(`-> ${answer.answerName}`);
@@ -154,6 +164,7 @@ const makeAnswerProcessor =
       alternativePhrasings,
     } = parsed;
     md = compressMarkdown(md);
+    md = replaceGdocLinks(md, allAnswers);
 
     // Keep only doc IDs which actually have matching answers
     const validRelatedAnswers = relatedAnswerDocIDs.filter(
@@ -220,7 +231,7 @@ const parseAllAnswerDocs = async () => {
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
-        lastIngestDate < new Date("2023-05-08 10:00"); // To force a full purge of Docs-sourced data in Coda, set this time to just a minute before "now" and let it run. Don't update the time between runs if one times out, otherwise it'll restart. Just set the time once and let the script run as many time as it needs to in order to finish.
+        Boolean(process.env.PARSE_ALL);
       return (
         !["Withdrawn", "Marked for deletion"].includes(status) && needsUpdate
       );
