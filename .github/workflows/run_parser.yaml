@@ -1,9 +1,4 @@
 name: Run parser
-inputs:
-  force-parse:
-    description: 'Whether to force a reparse of all answers'
-    required: false
-    default: 'false'
 
 on:
   schedule:
@@ -13,6 +8,13 @@ on:
       roles:
         # A special role to limit who can deploy stuff - see https://github.com/orgs/StampyAI/teams/deployers
         - StampyAI/deployers
+  inputs:
+    force-parse:
+      description: 'Whether to force a reparse of all answers'
+      type: choice
+      options:
+      - true
+      - false
 
 env:
   CODA_TOKEN: ${{ secrets.CODA_TOKEN }}
