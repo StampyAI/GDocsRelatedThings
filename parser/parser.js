@@ -24,10 +24,11 @@ const extractFootnotes = (documentContext, doc) =>
     )
     .join("\n");
 
-const extractRelatedAnswerIDs = (blocks) => {
-  // This gets a little messy because we may have related answers referenced with either rich "chip" links or plain text links
-  return blocks
-    .map((block) => block.paragraph.elements[0])
+// This gets a little messy because we may have related answers referenced with either rich "chip" links or plain text links
+const extractRelatedAnswerIDs = (blocks) =>
+  blocks
+    .map((block) => block.paragraph?.elements[0])
+    .filter(Boolean)
     .map((block) =>
       block.richLink
         ? block?.richLink.richLinkProperties.uri
@@ -41,7 +42,6 @@ const extractRelatedAnswerIDs = (blocks) => {
         )?.[1] ?? null
     )
     .filter(Boolean);
-};
 
 const extractAllParagraphs = (blocks) =>
   blocks
