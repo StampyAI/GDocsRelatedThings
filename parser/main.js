@@ -129,12 +129,15 @@ const saveAnswer = async (
   return true;
 };
 
-const replaceGdocLinks = (md, allAnswers) =>
+export const replaceGdocLinks = (md, allAnswers) =>
   allAnswers.reduce(
     (md, answer) =>
       md.replaceAll(
-        answer[codaColumnIDs.docURL],
-        `/?state=${answer[codaColumnIDs.UIID]}`
+        new RegExp(
+          `\\(\\s*?https://docs.google.com/document/d/${answer.docID}[^)]*?\\)`,
+          "g"
+        ),
+        `(/?state=${answer[codaColumnIDs.UIID]})`
       ),
     md
   );
