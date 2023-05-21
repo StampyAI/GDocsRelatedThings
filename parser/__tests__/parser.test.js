@@ -288,6 +288,33 @@ describe("parseParagraph", () => {
     paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
   };
 
+  it("should handle empty paragraphs", () => {
+    const result = parseParagraph(documentContext)({
+      elements: [
+        { textRun: { content: "  \n \n " } },
+        { textRun: { content: "" } },
+      ],
+      paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+    });
+    expect(result).toEqual("");
+  });
+
+  it("should paragraphs that are suggestions", () => {
+    const result = parseParagraph(documentContext)({
+      elements: [
+        {
+          textRun: {
+            content: "This is a suggestion",
+            suggestedInsertionIds: ["1"],
+          },
+        },
+        { textRun: { content: "As is this", suggestedInsertionIds: ["2"] } },
+      ],
+      paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+    });
+    expect(result).toEqual("");
+  });
+
   it("should return a plain paragraph without any formatting", () => {
     const result = parseParagraph(documentContext)(paragraph);
     expect(result).toEqual("Hello, world!");

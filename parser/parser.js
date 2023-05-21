@@ -205,7 +205,10 @@ export const parseParagraph = (documentContext) => (paragraph) => {
     prefix = headingPrefix;
   }
 
-  if (paragraphContext.bullet) {
+  if (md.join("").trim() === "") {
+    // If the paragraph is empty (e.g. consists only of suggestions), then ignore it
+    return "";
+  } else if (paragraphContext.bullet) {
     const pb = paragraphContext.bullet;
     const nestingLevel = pb.nestingLevel || 0;
     const listID = pb.listId;
