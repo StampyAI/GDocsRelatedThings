@@ -4,6 +4,11 @@ import { hideBin } from "yargs/helpers";
 import { getDocsClient } from "./parser/gdrive.js";
 import { parseDoc } from "./parser/parser.js";
 
+const getDocJSON = async (documentId) => {
+  const docsClient = await getDocsClient();
+  return (await docsClient.documents.get({ documentId })).data;
+};
+
 yargs(hideBin(process.argv))
   .usage("Usage: $0 <command> [options]")
   .command(
@@ -15,10 +20,9 @@ yargs(hideBin(process.argv))
       },
     }) => {
       try {
-        const docs = await getDocsClient();
-        const doc = (await docs.documents.get({ documentId })).data;
+        const docJSON = await getDocJSON(documentId);
 
-        console.log(JSON.stringify(doc, null, 2));
+        console.log(JSON.stringify(docJSON, null, 2));
       } catch (e) {
         if (e.code === 404) {
           console.error("Invalid doc ID");
@@ -35,10 +39,8 @@ yargs(hideBin(process.argv))
       },
     }) => {
       try {
-        const docs = await getDocsClient();
-        const doc = (await docs.documents.get({ documentId })).data;
-
-        console.log((await parseDoc(doc)).md);
+        const docJSON = await getDocJSON(documentId);
+        console.log((await parseDoc(docJSON)).md);
       } catch (e) {
         if (e.code === 404) {
           console.error("Invalid doc ID");
