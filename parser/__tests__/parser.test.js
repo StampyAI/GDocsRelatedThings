@@ -183,7 +183,9 @@ describe("parseinlineObjectElement", () => {
       },
     };
     const result = parseinlineObjectElement(object, context);
-    expect(result).toBe("\n![An image](https://example.com/image.jpg Title)\n");
+    expect(result).toBe(
+      '\n![An image](https://example.com/image.jpg "Title")\n'
+    );
   });
 
   it("should return a markdown image with only description if title not available", () => {
