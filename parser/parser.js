@@ -351,7 +351,7 @@ export const parseinlineObjectElement = (
   return (
     "\n" +
     `![${image.description || ""}](${imageURL}${
-      image.title ? ` ${image.title}` : ""
+      image.title ? ` "${image.title.replace(/"/g, '\\"')}"` : ""
     })` +
     "\n"
   );
