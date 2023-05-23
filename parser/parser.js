@@ -309,7 +309,8 @@ export const parsetextRun = ({ textStyle, content }) => {
       text = escapeHtml(text);
     }
   }
-  return prefix + text + suffix;
+
+  return (prefix + text + suffix).replace(/\u000B/g, "\n");
 };
 
 export const parserichLink = ({ richLinkProperties: { title, uri } }) => {
