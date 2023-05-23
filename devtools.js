@@ -33,7 +33,11 @@ yargs(hideBin(process.argv))
 
                 console.log((await parseDoc(doc)).md)
             } catch (e) {
-                console.error(e)
+                if (e.code === 404) {
+                    console.error("Invalid doc ID")
+                } else {
+                    console.error(e)
+                }
             }
         }
     )
