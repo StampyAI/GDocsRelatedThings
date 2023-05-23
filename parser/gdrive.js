@@ -13,13 +13,11 @@ const keyPath = "credentials.json";
 
 const getCredentials = () => {
   if (process.env.GCLOUD_CREDENTIALS) {
-    console.info("Using Google credentials from GCLOUD_CREDENTIALS");
     return JSON.parse(process.env.GCLOUD_CREDENTIALS);
+  } else {
+    const data = fs.readFileSync(keyPath, "utf8");
+    return JSON.parse(data);
   }
-
-  console.info("Using Google credentials from credentials.json file");
-  const data = fs.readFileSync(keyPath, "utf8");
-  return JSON.parse(data);
 };
 
 const authenticate = async () => {
