@@ -55,7 +55,7 @@ const extractDocParts = (doc) => {
       if (text == "Related") {
         context.contentType = "metablocks";
       } else if (
-        ["Alternative phrasings", "Alternate phrasings"].includes(text)
+          ["alternative phrasings", "alternate phrasings"].includes(text?.toLowerCase())
       ) {
         context.contentType = "alternatives";
       } else {
