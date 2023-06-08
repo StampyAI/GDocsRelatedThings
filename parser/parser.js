@@ -55,17 +55,25 @@ const extractDocParts = (doc) => {
       if (text == "Related") {
         context.contentType = "metablocks";
       } else if (
-          ["alternative phrasings", "alternate phrasings"].includes(text?.toLowerCase())
+        ["alternative phrasings", "alternate phrasings"].includes(
+          text?.toLowerCase()
+        )
       ) {
         context.contentType = "alternatives";
-      } else if (text?.toLowerCase() == 'scratchpad') {
-          context.contentType = "scratchpad";
+      } else if (text?.toLowerCase() == "scratchpad") {
+        context.contentType = "scratchpad";
       } else {
         context[context.contentType].push(block);
       }
       return context;
     },
-    { content: [], metablocks: [], alternatives: [], scratchpad: [], contentType: "content" }
+    {
+      content: [],
+      metablocks: [],
+      alternatives: [],
+      scratchpad: [],
+      contentType: "content",
+    }
   );
 
   return {

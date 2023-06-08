@@ -134,7 +134,7 @@ export const replaceGdocLinks = (md, allAnswers) =>
     (md, answer) =>
       md.replaceAll(
         new RegExp(
-          `\\(\\s*?https://docs.google.com/document/d/${answer.docID}[^)]*?\\)`,
+          `\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
           "g"
         ),
         `(/?state=${answer[codaColumnIDs.UIID]})`
