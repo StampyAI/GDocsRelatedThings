@@ -236,7 +236,7 @@ const parseAllAnswerDocs = async () => {
         answer.answerName === "Example with all the formatting" ||
         Boolean(process.env.PARSE_ALL);
       return (
-        !["Withdrawn", "Marked for deletion"].includes(status) && needsUpdate
+        !["Withdrawn", "Marked for deletion", "Uncategorized"].includes(status) && needsUpdate
       );
     })
     // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
