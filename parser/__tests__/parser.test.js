@@ -11,6 +11,7 @@ import {
   parsehorizontalRule,
   parsefootnoteReference,
   parseElement,
+  mergeSameElements,
 } from "../parser.js";
 
 fetchMock.enableMocks();
@@ -765,5 +766,67 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual(
       "This is an example LW tag content (see mockResponse)"
     );
+  });
+});
+
+describe("mergeSameElements", () => {
+  const makeElement = (text, url) => {
+    const elem = {
+      startIndex: 1,
+      endIndex: 3,
+      textRun: {
+        content: text,
+        textStyle: {
+          baselineOffset: "NONE",
+        },
+      },
+    };
+    if (url) {
+      elem.textRun.textStyle.link = { url };
+    }
+    return elem;
+  };
+
+  it("Items without links aren't touched", async () => {
+    const elements = [
+      makeElement("Bla "),
+      makeElement("bla"),
+      makeElement(" "),
+      makeElement("bla"),
+    ];
+    expect(mergeSameElements(elements)).toEqual(elements);
+  });
+
+  it("Non consequent links aren't touched", async () => {
+    const elements = [
+      makeElement("Bla ", "http://bla.com"),
+      makeElement("bla"),
+      makeElement(" ", "http://bla.com"),
+      makeElement("bla"),
+    ];
+    expect(mergeSameElements(elements)).toEqual(elements);
+  });
+
+  it("Consequent links that are different aren't touched", async () => {
+    const elements = [
+      makeElement("Bla ", "http://bla.com"),
+      makeElement("bla", "http://ble.ble"),
+      makeElement(" ", "http://bla.com"),
+      makeElement("bla"),
+    ];
+    expect(mergeSameElements(elements)).toEqual(elements);
+  });
+
+  it("Consequent links that are the same get merged", async () => {
+    const elements = [
+      makeElement("Bla ", "http://bla.com"),
+      makeElement("bla", "http://bla.com"),
+      makeElement(" ", "http://bla.com"),
+      makeElement("bla"),
+    ];
+    expect(mergeSameElements(elements)).toEqual([
+      makeElement("Bla bla ", "http://bla.com"),
+      makeElement("bla"),
+    ]);
   });
 });

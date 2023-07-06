@@ -198,11 +198,28 @@ const getLWTag = (tagName) => getTag("https://www.lesswrong.com", tagName);
 const getEAFTag = (tagName) =>
   getTag("https://forum.effectivealtruism.org", tagName);
 
+const extractUrl = (element) => element?.textRun?.textStyle?.link?.url;
+// Google docs sometime split things that obviously go together into smaller parts.
+// This is usually fine if it's just a matter of styling, but can be annoying when it
+// does it to links
+export const mergeSameElements = (elements) =>
+  elements.reduce((acc, item) => {
+    const prev = acc[acc.length - 1];
+    if (extractUrl(item) && extractUrl(prev) === extractUrl(item)) {
+      prev.textRun.content += item.textRun.content;
+    } else {
+      acc.push(item);
+    }
+    return acc;
+  }, []);
+
 export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
   const paragraphStyleName = paragraphContext.paragraphStyle.namedStyleType;
 
-  let md = elements.map(parseElement({ documentContext, paragraphContext }));
+  let md = mergeSameElements(elements).map(
+    parseElement({ documentContext, paragraphContext })
+  );
 
   let prefix = "";
   let itemMarker = "";
