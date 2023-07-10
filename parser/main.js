@@ -154,7 +154,7 @@ const makeAnswerProcessor =
     // https://gist.github.com/ChrisRimmer/a2a702fe86b5251c235b22c8f4d0e2b4
     let parsed;
     try {
-      parsed = await parseDoc(doc);
+      parsed = await parseDoc(doc, answer);
     } catch (err) {
       logError("Error while parsing contents", answer, err);
       return false;

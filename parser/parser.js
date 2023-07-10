@@ -85,7 +85,43 @@ const extractDocParts = (doc) => {
   };
 };
 
-export const parseDoc = async (doc) => {
+const uploadImage = async (url, metadata) => {
+  const formData = new FormData();
+  formData.append("url", url);
+  formData.append("metadata", JSON.stringify(metadata || {}));
+  formData.append("requireSignedURLs", "false");
+
+  return fetch(
+    `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/images/v1`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+      },
+      body: formData,
+    }
+  )
+    .then((res) => res.json())
+    .then(
+      (data) => data.result.variants.filter((u) => u.includes("/public"))[0]
+    );
+};
+
+const replaceImages = async (objects, uiid) => {
+  const updates = Object.entries(objects || {}).map(async ([key, obj]) => {
+    const img = obj?.inlineObjectProperties?.embeddedObject;
+    if (img) {
+      img.imageProperties.contentUri = await uploadImage(
+        img.imageProperties.contentUri,
+        { title: img.title, UIID: uiid }
+      );
+    }
+  });
+  await Promise.all(updates);
+};
+
+export const parseDoc = async (doc, answer) => {
+  await replaceImages(doc.inlineObjects, doc.UIID);
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
   const documentContext = {
@@ -369,7 +405,7 @@ export const parseinlineObjectElement = (
   inlineObjectElement,
   { documentContext }
 ) => {
-  // I hate this line. The JSON representation of a google Doc is fairly deeply nested, this is just the path we have to probe top get the URL of the image that's been references by the object ID in the paragraph
+  // I hate this line. The JSON representation of a google Doc is fairly deeply nested, this is just the path we have to probe to get the URL of the image that's been references by the object ID in the paragraph
   const image =
     documentContext.inlineObjects[inlineObjectElement.inlineObjectId]
       .inlineObjectProperties.embeddedObject;
