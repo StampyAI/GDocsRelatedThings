@@ -6,6 +6,8 @@ export const codaDocID = "fau7sl2hmG";
 export const codaDocURL = `${basePath}/docs/${codaDocID}`;
 export const tableID = "grid-sync-1059-File";
 export const tableURL = `${codaDocURL}/tables/${tableID}`;
+export const glossaryTableID = "grid-_pSzs23jmw";
+export const glossaryTableURL = `${codaDocURL}/tables/${glossaryTableID}`;
 export const codaColumnIDs = {
   docLastEdited: "c-UQjERPXq8o",
   docURL: "c-5qIm4D1QKk",
@@ -21,4 +23,10 @@ export const codaColumnIDs = {
   status: "c-Gr2GDh30nR",
   commentsCount: "c-kakZoTgC9y",
   alternativePhrasings: "c-bLWz7lnXHG",
+  tags: "c-fW9FG_MXY0",
+
+  glossaryWord: "c-QdLiDUKLm0",
+  glossaryRichText: "c-KXNjnKWLkC",
+  glossaryQuestion: "c-ysnFuCAJ9w",
+  glossaryQuestionID: "c-2ovUysMhUF",
 };

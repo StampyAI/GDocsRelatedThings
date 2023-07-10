@@ -49,40 +49,52 @@ const extractAllParagraphs = (blocks) =>
     .map((b) => b.paragraph);
 
 const extractDocParts = (doc) => {
+  const sectionHeaders = {
+    "alternative phrasings": "alternatives",
+    "alternate phrasings": "alternatives",
+    scratchpad: "scratchpad",
+    related: "related",
+    glossary: "glossary",
+  };
   const blocks = doc.body.content.reduce(
     (context, block) => {
-      const text = extractBlockText(block);
-      if (text == "Related") {
-        context.contentType = "metablocks";
-      } else if (
-        ["alternative phrasings", "alternate phrasings"].includes(
-          text?.toLowerCase()
-        )
-      ) {
-        context.contentType = "alternatives";
-      } else if (text?.toLowerCase() == "scratchpad") {
-        context.contentType = "scratchpad";
+      const text = extractBlockText(block)
+        ?.replace(":", "")
+        .trim()
+        .toLowerCase();
+      if (sectionHeaders[text]) {
+        context.contentType = sectionHeaders[text];
+        context[context.contentType] = context[context.contentType] || [];
       } else {
         context[context.contentType].push(block);
       }
       return context;
     },
     {
+      ...Object.fromEntries(Object.values(sectionHeaders).map((i) => [i, []])),
       content: [],
-      metablocks: [],
-      alternatives: [],
-      scratchpad: [],
       contentType: "content",
     }
   );
 
   return {
     paragraphs: extractAllParagraphs(blocks.content),
-    relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.metablocks),
+    relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.related),
+    glossary: extractAllParagraphs(blocks.glossary),
     alternativePhrasings: blocks.alternatives
       .map(extractBlockText)
       .filter(Boolean),
   };
+};
+
+const glossaryText = (glossary, contents, context) => {
+  if (glossary.length > 0) {
+    return glossary.map(parseParagraph(documentContext)).join("\n\n");
+  }
+  return contents
+    .split("\n")
+    .map((i) => i.trim())
+    .filter((i) => i !== "")[0];
 };
 
 export const parseDoc = async (doc) => {
@@ -95,13 +107,18 @@ export const parseDoc = async (doc) => {
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
   };
-  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings } =
+  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
     extractDocParts(doc);
 
-  // If the content is just a link to external content, fetch it and return it right away
+  // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
-    return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
+    return {
+      md: tagContent,
+      relatedAnswerDocIDs,
+      alternativePhrasings,
+      glossaryText: glossaryText(glossary, tagContent, documentContext),
+    };
   }
 
   const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
@@ -124,6 +141,7 @@ export const parseDoc = async (doc) => {
     alternativePhrasings,
     suggestionCount: suggestions.size,
     suggestionSize,
+    glossaryText: glossaryText(glossary, md, documentContext),
   };
 
   return ret;

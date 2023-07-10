@@ -1,4 +1,4 @@
-import { tableURL, codaColumnIDs } from "./constants.js";
+import { tableURL, codaColumnIDs, glossaryTableURL } from "./constants.js";
 
 export const getDocIDFromLink = (docLink) =>
   docLink.match(/https:\/\/\w+.google.com\/(\w+\/)+(?<docID>[_-\w]{25,}).*/)
@@ -45,6 +45,8 @@ export const getAnswers = async (tableURL) => {
         codaID: row.id,
         answerName: row.name,
         docID: getDocIDFromLink(row.values[codaColumnIDs.docURL]),
+        UIID: row.values[codaColumnIDs.UIID],
+        tags: row.values[codaColumnIDs.tags]?.split(","),
         ...row.values,
       }))
       // The gdocs -> Coda integration also imports folders as new rows. So manually discard them here :/
@@ -54,6 +56,37 @@ export const getAnswers = async (tableURL) => {
   );
 };
 
+const codaMutate = async (url, method, payload) =>
+  codaRequest(url, {
+    method,
+    muteHttpExceptions: true,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+export const codaUpdate = async (url, values) =>
+  codaMutate(url, "put", {
+    row: {
+      cells: Object.entries(values).map(([k, v]) => ({
+        column: codaColumnIDs[k],
+        value: v,
+      })),
+    },
+  });
+
+export const codaUpsert = async (url, values, keyColumns) =>
+  codaMutate(url, "post", {
+    rows: [
+      {
+        cells: Object.entries(values).map(([k, v]) => ({
+          column: codaColumnIDs[k],
+          value: v,
+        })),
+      },
+    ],
+    keyColumns: keyColumns.map((k) => codaColumnIDs[k]),
+  });
+
 export const updateAnswer = async (
   id,
   md,
@@ -62,47 +95,30 @@ export const updateAnswer = async (
   suggestionSize,
   commentsCount,
   alternativePhrasings
-) => {
-  const rowURL = `${tableURL}/rows/${id}`;
-  const payload = {
-    row: {
-      cells: [
-        {
-          column: codaColumnIDs.relatedAnswerNames,
-          value: relatedAnswerNames,
-        },
-        {
-          column: codaColumnIDs.lastIngested,
-          value: new Date().toISOString(),
-        },
-        {
-          column: codaColumnIDs.richText,
-          value: md,
-        },
-        {
-          column: codaColumnIDs.preexistingSuggestionCount,
-          value: suggestionCount,
-        },
-        {
-          column: codaColumnIDs.preexistingSuggestionSize,
-          value: suggestionSize,
-        },
-        {
-          column: codaColumnIDs.commentsCount,
-          value: commentsCount,
-        },
-        {
-          column: codaColumnIDs.alternativePhrasings,
-          value: (alternativePhrasings || []).join("\n"),
-        },
-      ],
-    },
-  };
-
-  return codaRequest(rowURL, {
-    method: "put",
-    muteHttpExceptions: true,
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
+) =>
+  codaUpdate(`${tableURL}/rows/${id}`, {
+    relatedAnswerNames: relatedAnswerNames,
+    lastIngested: new Date().toISOString(),
+    richText: md,
+    preexistingSuggestionCount: suggestionCount,
+    preexistingSuggestionSize: suggestionSize,
+    commentsCount: commentsCount,
+    alternativePhrasings: (alternativePhrasings || []).join("\n"),
   });
-};
+
+export const updateGlossary = async (
+  glossaryWord,
+  questionId,
+  questionUIId,
+  md
+) =>
+  codaUpsert(
+    `${glossaryTableURL}/rows/`,
+    {
+      glossaryWord,
+      glossaryQuestion: questionId,
+      glossaryQuestionID: questionUIId,
+      glossaryRichText: md,
+    },
+    ["glossaryWord"]
+  );
