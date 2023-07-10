@@ -1,6 +1,8 @@
 import dotenv from "dotenv";
 dotenv.config();
 
+export const GLOSSARY_DOC = "1Rm7tN5zTErZq0E4qqAZoNVzClS94Kb_rQOLaViu2p6c";
+
 export const basePath = "https://coda.io/apis/v1/";
 export const codaDocID = "fau7sl2hmG";
 export const codaDocURL = `${basePath}/docs/${codaDocID}`;
@@ -29,4 +31,5 @@ export const codaColumnIDs = {
   glossaryRichText: "c-KXNjnKWLkC",
   glossaryQuestion: "c-ysnFuCAJ9w",
   glossaryQuestionID: "c-2ovUysMhUF",
+  glossaryAliases: "c-UGtluV-1jN",
 };

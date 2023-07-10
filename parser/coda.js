@@ -110,7 +110,8 @@ export const updateGlossary = async (
   glossaryWord,
   questionId,
   questionUIId,
-  md
+  md,
+  aliases
 ) =>
   codaUpsert(
     `${glossaryTableURL}/rows/`,
@@ -119,6 +120,7 @@ export const updateGlossary = async (
       glossaryQuestion: questionId,
       glossaryQuestionID: questionUIId,
       glossaryRichText: md,
+      glossaryAliases: aliases,
     },
     ["glossaryWord"]
   );

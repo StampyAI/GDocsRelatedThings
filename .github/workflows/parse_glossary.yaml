@@ -1,0 +1,36 @@
+name: Parse glossary entries
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Every hour
+  workflow_dispatch:
+    permissions:
+      roles:
+        # A special role to limit who can deploy stuff - see https://github.com/orgs/StampyAI/teams/deployers
+        - StampyAI/deployers
+
+env:
+  CODA_TOKEN: ${{ secrets.CODA_TOKEN }}
+  GCLOUD_CREDENTIALS: ${{ secrets.GCLOUD_CREDENTIALS }}
+  DISCORD_ERROR: ${{ secrets.DISCORD_ERROR }}
+  DISCORD_FEED: ${{ secrets.DISCORD_FEED }}
+
+jobs:
+  run-parser:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run the parser
+      run: node bin/importGlossary.js

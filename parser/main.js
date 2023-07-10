@@ -142,31 +142,6 @@ export const replaceGdocLinks = (md, allAnswers) =>
     md
   );
 
-const setGlossary = async (answer, glossaryText) => {
-  if (!answer.tags.includes("Glossary")) return true;
-
-  const phrase = answer.answerName.replace(
-    /^What (?:(?:is)|(?:are)) (?:(?:a|an|the) )?(?:'|")?(.*?)(?:'|")?\?$/,
-    "$1"
-  );
-  try {
-    const res = await updateGlossary(
-      phrase,
-      answer.answerName,
-      answer.UIID,
-      glossaryText
-    );
-    if (res.status > 300) {
-      await logError(`Could not update glossary item: ${res.statusText}`);
-      return false;
-    }
-  } catch (err) {
-    await logError(`Could not update glossary item: ${err}`);
-    return false;
-  }
-  return true;
-};
-
 const makeAnswerProcessor =
   (allAnswers, gdocsClient, gdriveClient) => async (answer) => {
     console.info(`-> ${answer.answerName}`);
@@ -190,7 +165,6 @@ const makeAnswerProcessor =
       suggestionCount,
       suggestionSize,
       alternativePhrasings,
-      glossaryText,
     } = parsed;
     md = compressMarkdown(md);
     md = replaceGdocLinks(md, allAnswers);
@@ -233,7 +207,6 @@ const makeAnswerProcessor =
 
     return (
       isSaved &&
-      (await setGlossary(answer, glossaryText)) &&
       // Make sure the answer's document is in the correct folder
       (await moveAnswer(gdriveClient, answer))
     );

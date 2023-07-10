@@ -54,7 +54,6 @@ const extractDocParts = (doc) => {
     "alternate phrasings": "alternatives",
     scratchpad: "scratchpad",
     related: "related",
-    glossary: "glossary",
   };
   const blocks = doc.body.content.reduce(
     (context, block) => {
@@ -80,21 +79,10 @@ const extractDocParts = (doc) => {
   return {
     paragraphs: extractAllParagraphs(blocks.content),
     relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.related),
-    glossary: extractAllParagraphs(blocks.glossary),
     alternativePhrasings: blocks.alternatives
       .map(extractBlockText)
       .filter(Boolean),
   };
-};
-
-const glossaryText = (glossary, contents, context) => {
-  if (glossary.length > 0) {
-    return glossary.map(parseParagraph(documentContext)).join("\n\n");
-  }
-  return contents
-    .split("\n")
-    .map((i) => i.trim())
-    .filter((i) => i !== "")[0];
 };
 
 export const parseDoc = async (doc) => {
@@ -113,12 +101,7 @@ export const parseDoc = async (doc) => {
   // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
-    return {
-      md: tagContent,
-      relatedAnswerDocIDs,
-      alternativePhrasings,
-      glossaryText: glossaryText(glossary, tagContent, documentContext),
-    };
+    return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
   const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
@@ -141,7 +124,6 @@ export const parseDoc = async (doc) => {
     alternativePhrasings,
     suggestionCount: suggestions.size,
     suggestionSize,
-    glossaryText: glossaryText(glossary, md, documentContext),
   };
 
   return ret;
@@ -233,7 +215,7 @@ export const mergeSameElements = (elements) =>
 
 export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
-  const paragraphStyleName = paragraphContext.paragraphStyle.namedStyleType;
+  const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
 
   let md = mergeSameElements(elements).map(
     parseElement({ documentContext, paragraphContext })
@@ -406,6 +388,23 @@ export const parsehorizontalRule = () => {
   return "___";
 };
 
+export const tableParser = (context) => {
+  const paragraphParser = parseParagraph(context);
+  const extractRow = ({ tableCells }) =>
+    tableCells.map(
+      ({ content }) => extractAllParagraphs(content).map(paragraphParser)[0]
+    );
+
+  return ({ tableRows }) => {
+    const rawRows = tableRows.map(extractRow);
+    const header = rawRows[0].map((i) => i.toLowerCase().trim());
+
+    return rawRows
+      .slice(1)
+      .map((row) => Object.fromEntries(row.map((val, i) => [header[i], val])));
+  };
+};
+
 const updateSuggestions = (docContext, elementContent, key, amount) => {
   const suggestions = docContext?.suggestions;
   if (!suggestions) return;
@@ -431,6 +430,7 @@ export const parseElement = (context) => (element) => {
     footnoteReference: parsefootnoteReference,
     inlineObjectElement: parseinlineObjectElement,
     horizontalRule: parsehorizontalRule,
+    table: tableParser(context),
   };
 
   const elementType = Object.keys(element).find(
