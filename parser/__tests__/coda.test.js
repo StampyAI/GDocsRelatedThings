@@ -50,6 +50,7 @@ describe("getAnswers", () => {
     expect(result).toEqual([
       {
         codaID: "1",
+        UIID: "1",
         answerName: "Answer 1",
         docID: "000000000000000000000000000001",
         [codaColumnIDs.UIID]: "1",
@@ -58,6 +59,7 @@ describe("getAnswers", () => {
       },
       {
         codaID: "2",
+        UIID: "2",
         answerName: "Answer 2",
         docID: "000000000000000000000000000002",
         [codaColumnIDs.UIID]: "2",
@@ -75,6 +77,7 @@ describe("getAnswers", () => {
     expect(result).toEqual([
       {
         codaID: "1",
+        UIID: "1",
         answerName: "Answer 1",
         docID: "000000000000000000000000000001",
         [codaColumnIDs.UIID]: "1",
@@ -101,6 +104,7 @@ describe("getAnswers", () => {
     expect(result).toEqual(
       [1, 2, 3, 4].map((i) => ({
         codaID: `${i}`,
+        UIID: `${i}`,
         answerName: `Answer ${i}`,
         docID: `00000000000000000000000000000${i}`,
         [codaColumnIDs.UIID]: `${i}`,
@@ -136,10 +140,6 @@ describe("updateAnswer", () => {
             value: relatedAnswerNames,
           },
           {
-            column: codaColumnIDs.lastIngested,
-            value: mockDate.toISOString(),
-          },
-          {
             column: codaColumnIDs.richText,
             value: md,
           },
@@ -158,6 +158,10 @@ describe("updateAnswer", () => {
           {
             column: codaColumnIDs.alternativePhrasings,
             value: alternativePhrasings.join("\n"),
+          },
+          {
+            column: codaColumnIDs.lastIngested,
+            value: mockDate.toISOString(),
           },
         ],
       },

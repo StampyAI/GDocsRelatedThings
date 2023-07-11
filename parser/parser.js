@@ -49,36 +49,36 @@ const extractAllParagraphs = (blocks) =>
     .map((b) => b.paragraph);
 
 const extractDocParts = (doc) => {
+  const sectionHeaders = {
+    "alternative phrasings": "alternatives",
+    "alternate phrasings": "alternatives",
+    scratchpad: "scratchpad",
+    related: "related",
+  };
   const blocks = doc.body.content.reduce(
     (context, block) => {
-      const text = extractBlockText(block);
-      if (text == "Related") {
-        context.contentType = "metablocks";
-      } else if (
-        ["alternative phrasings", "alternate phrasings"].includes(
-          text?.toLowerCase()
-        )
-      ) {
-        context.contentType = "alternatives";
-      } else if (text?.toLowerCase() == "scratchpad") {
-        context.contentType = "scratchpad";
+      const text = extractBlockText(block)
+        ?.replace(":", "")
+        .trim()
+        .toLowerCase();
+      if (sectionHeaders[text]) {
+        context.contentType = sectionHeaders[text];
+        context[context.contentType] = context[context.contentType] || [];
       } else {
         context[context.contentType].push(block);
       }
       return context;
     },
     {
+      ...Object.fromEntries(Object.values(sectionHeaders).map((i) => [i, []])),
       content: [],
-      metablocks: [],
-      alternatives: [],
-      scratchpad: [],
       contentType: "content",
     }
   );
 
   return {
     paragraphs: extractAllParagraphs(blocks.content),
-    relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.metablocks),
+    relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.related),
     alternativePhrasings: blocks.alternatives
       .map(extractBlockText)
       .filter(Boolean),
@@ -95,10 +95,10 @@ export const parseDoc = async (doc) => {
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
   };
-  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings } =
+  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
     extractDocParts(doc);
 
-  // If the content is just a link to external content, fetch it and return it right away
+  // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
     return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
@@ -215,7 +215,7 @@ export const mergeSameElements = (elements) =>
 
 export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
-  const paragraphStyleName = paragraphContext.paragraphStyle.namedStyleType;
+  const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
 
   let md = mergeSameElements(elements).map(
     parseElement({ documentContext, paragraphContext })
@@ -388,6 +388,23 @@ export const parsehorizontalRule = () => {
   return "___";
 };
 
+export const tableParser = (context) => {
+  const paragraphParser = parseParagraph(context);
+  const extractRow = ({ tableCells }) =>
+    tableCells.map(
+      ({ content }) => extractAllParagraphs(content).map(paragraphParser)[0]
+    );
+
+  return ({ tableRows }) => {
+    const rawRows = tableRows.map(extractRow);
+    const header = rawRows[0].map((i) => i.toLowerCase().trim());
+
+    return rawRows
+      .slice(1)
+      .map((row) => Object.fromEntries(row.map((val, i) => [header[i], val])));
+  };
+};
+
 const updateSuggestions = (docContext, elementContent, key, amount) => {
   const suggestions = docContext?.suggestions;
   if (!suggestions) return;
@@ -413,6 +430,7 @@ export const parseElement = (context) => (element) => {
     footnoteReference: parsefootnoteReference,
     inlineObjectElement: parseinlineObjectElement,
     horizontalRule: parsehorizontalRule,
+    table: tableParser(context),
   };
 
   const elementType = Object.keys(element).find(

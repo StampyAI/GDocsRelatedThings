@@ -1,4 +1,4 @@
-import { getAnswers, updateAnswer } from "./coda.js";
+import { getAnswers, updateAnswer, updateGlossary } from "./coda.js";
 import { compressMarkdown, sendToDiscord, logError } from "./utils.js";
 import { parseDoc } from "./parser.js";
 import {
@@ -204,10 +204,12 @@ const makeAnswerProcessor =
       commentsCount,
       uniqueAlternatives
     );
-    if (!isSaved) return false;
 
-    // Make sure the answer's document is in the correct folder
-    return await moveAnswer(gdriveClient, answer);
+    return (
+      isSaved &&
+      // Make sure the answer's document is in the correct folder
+      (await moveAnswer(gdriveClient, answer))
+    );
   };
 
 const parseAllAnswerDocs = async () => {
