@@ -53,9 +53,11 @@ const gdocToUIID = Object.fromEntries(
 );
 const getAnswer = ({ question }) => gdocToUIID[extractDocId(question)];
 
-const rows = parseElement(documentContext)(table).map((row) => ({
-  ...row,
-  answer: getAnswer(row),
-}));
+const rows = parseElement(documentContext)(table)
+  .filter((row) => Boolean(row.term.trim()) && Boolean(row.definition.trim()))
+  .map((row) => ({
+    ...row,
+    answer: getAnswer(row),
+  }));
 
 rows.forEach(setGlossary);
