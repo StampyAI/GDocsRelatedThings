@@ -3,6 +3,7 @@ import { getAnswers, updateGlossary } from "../parser/coda.js";
 import { parseElement } from "../parser/parser.js";
 import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
+import { logError } from "../parser/utils.js";
 
 const setGlossary = async ({ term, aliases, definition, answer }) => {
   const phrase = decode(term.trim());
@@ -10,8 +11,8 @@ const setGlossary = async ({ term, aliases, definition, answer }) => {
   try {
     const res = await updateGlossary(
       phrase,
-      answer.answerName,
-      answer.UIID,
+      answer?.answerName || "",
+      answer?.UIID || "",
       definition,
       aliases
     );
@@ -29,7 +30,11 @@ const setGlossary = async ({ term, aliases, definition, answer }) => {
 const extractDocId = (link) => {
   const regex =
     /\s*?\(https:\/\/docs\.google\.com\/document\/(?:u\/)?(?:0\/)?d\/([^\/]*?)\//;
-  return link.match(regex)[1];
+  try {
+    return link.match(regex)[1];
+  } catch (err) {
+    return null;
+  }
 };
 
 const gdocsClient = await getDocsClient();
