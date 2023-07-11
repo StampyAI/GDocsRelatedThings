@@ -1,0 +1,32 @@
+name: Prune stale images from Cloudflare
+
+on:
+  schedule:
+    - cron: '0 0 * * *' # Every day at midnight
+  workflow_dispatch:
+
+env:
+  DISCORD_ERROR: ${{ secrets.DISCORD_ERROR }}
+  DISCORD_FEED: ${{ secrets.DISCORD_FEED }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ CLOUDFLARE_ACCOUNT_ID }}
+  CLOUDFLARE_API_TOKEN: ${{ CLOUDFLARE_API_TOKEN }}
+
+jobs:
+  run-parser:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '20.x'
+
+    - name: Install dependencies
+      run: npm install
+
+    - name: Run the parser
+      run: node bin/pruneImages.js
