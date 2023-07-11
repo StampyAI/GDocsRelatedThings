@@ -140,10 +140,6 @@ describe("updateAnswer", () => {
             value: relatedAnswerNames,
           },
           {
-            column: codaColumnIDs.lastIngested,
-            value: mockDate.toISOString(),
-          },
-          {
             column: codaColumnIDs.richText,
             value: md,
           },
@@ -162,6 +158,10 @@ describe("updateAnswer", () => {
           {
             column: codaColumnIDs.alternativePhrasings,
             value: alternativePhrasings.join("\n"),
+          },
+          {
+            column: codaColumnIDs.lastIngested,
+            value: mockDate.toISOString(),
           },
         ],
       },

@@ -98,12 +98,12 @@ export const updateAnswer = async (
 ) =>
   codaUpdate(`${tableURL}/rows/${id}`, {
     relatedAnswerNames: relatedAnswerNames,
-    lastIngested: new Date().toISOString(),
     richText: md,
     preexistingSuggestionCount: suggestionCount,
     preexistingSuggestionSize: suggestionSize,
     commentsCount: commentsCount,
     alternativePhrasings: (alternativePhrasings || []).join("\n"),
+    lastIngested: new Date().toISOString(),
   });
 
 export const updateGlossary = async (
@@ -121,6 +121,7 @@ export const updateGlossary = async (
       glossaryQuestionID: questionUIId,
       glossaryRichText: md,
       glossaryAliases: aliases,
+      glossaryLastIngested: new Date().toISOString(),
     },
     ["glossaryWord"]
   );

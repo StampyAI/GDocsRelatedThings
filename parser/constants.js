@@ -32,4 +32,5 @@ export const codaColumnIDs = {
   glossaryQuestion: "c-ysnFuCAJ9w",
   glossaryQuestionID: "c-2ovUysMhUF",
   glossaryAliases: "c-UGtluV-1jN",
+  glossaryLastIngested: "c-VLIMntWTmG",
 };
