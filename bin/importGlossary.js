@@ -1,11 +1,11 @@
-import he from "he";
+import { decode } from "html-entities";
 import { getAnswers, updateGlossary } from "../parser/coda.js";
 import { parseElement } from "../parser/parser.js";
 import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
 
 const setGlossary = async ({ term, aliases, definition, answer }) => {
-  const phrase = he.decode(term.trim());
+  const phrase = decode(term.trim());
   console.log(`-> ${phrase}`);
   try {
     const res = await updateGlossary(
@@ -33,7 +33,7 @@ const extractDocId = (link) => {
 };
 
 const gdocsClient = await getDocsClient();
-const doc = await getGoogleDoc({ docID:  GLOSSARY_DOC}, gdocsClient);
+const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
 const documentContext = {
   footnotes: doc.footnotes || {},
   namedStyles: doc.namedStyles,
