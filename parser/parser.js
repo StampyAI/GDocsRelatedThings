@@ -85,7 +85,7 @@ const extractDocParts = (doc) => {
   };
 };
 
-export const parseDoc = async (doc) => {
+export const parseDoc = async (doc, answer) => {
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
   const documentContext = {
@@ -369,7 +369,7 @@ export const parseinlineObjectElement = (
   inlineObjectElement,
   { documentContext }
 ) => {
-  // I hate this line. The JSON representation of a google Doc is fairly deeply nested, this is just the path we have to probe top get the URL of the image that's been references by the object ID in the paragraph
+  // I hate this line. The JSON representation of a google Doc is fairly deeply nested, this is just the path we have to probe to get the URL of the image that's been references by the object ID in the paragraph
   const image =
     documentContext.inlineObjects[inlineObjectElement.inlineObjectId]
       .inlineObjectProperties.embeddedObject;

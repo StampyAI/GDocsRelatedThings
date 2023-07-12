@@ -16,6 +16,7 @@ import {
   tableURL,
   codaColumnIDs,
 } from "./constants.js";
+import { replaceImages } from "./cloudflare.js";
 
 const makeDiscordMessage = (
   answer,
@@ -150,11 +151,15 @@ const makeAnswerProcessor =
       console.info(`skipping "${answer.answerName}"`);
       return false;
     }
+
+    // google sends temporary links to images, so move them over to cloudflare
+    await replaceImages(doc.inlineObjects, answer.UIID);
+
     // At this point we have a huge blob of JSON that looks kinda like:
     // https://gist.github.com/ChrisRimmer/a2a702fe86b5251c235b22c8f4d0e2b4
     let parsed;
     try {
-      parsed = await parseDoc(doc);
+      parsed = await parseDoc(doc, answer);
     } catch (err) {
       logError("Error while parsing contents", answer, err);
       return false;
