@@ -52,8 +52,13 @@ const gdocToUIID = Object.fromEntries(
   allAnswers.map((answer) => [answer.docID, answer])
 );
 const getAnswer = ({ question }) => gdocToUIID[extractDocId(question)];
+const stripFormatting = (row) =>
+  Object.fromEntries(
+    Object.entries(row).map(([k, v]) => [k.replaceAll("*", ""), v])
+  );
 
 const rows = parseElement(documentContext)(table)
+  .map(stripFormatting)
   .filter((row) => Boolean(row.term.trim()) && Boolean(row.definition.trim()))
   .map((row) => ({
     ...row,
