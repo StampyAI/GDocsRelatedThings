@@ -138,7 +138,7 @@ export const replaceGdocLinks = (md, allAnswers) =>
           `\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
           "g"
         ),
-        `(/?state=${answer[codaColumnIDs.UIID]})`
+          `(/?state=${answer.UIID}&question=${encodeURIComponent(answer.answerName)})`
       ),
     md
   );

@@ -24,6 +24,8 @@ const uploadImage = async (url, metadata) => {
 };
 
 export const replaceImages = async (objects, uiid) => {
+  if (!process.env.CLOUDFLARE_ACCOUNT_ID) return null;
+
   const fingerprint = randomUUID();
   const updates = Object.entries(objects || {}).map(async ([key, obj]) => {
     const img = obj?.inlineObjectProperties?.embeddedObject;
