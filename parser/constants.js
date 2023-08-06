@@ -26,6 +26,7 @@ export const codaColumnIDs = {
   commentsCount: "c-kakZoTgC9y",
   alternativePhrasings: "c-bLWz7lnXHG",
   tags: "c-fW9FG_MXY0",
+  banners: "c-xODpP0JOAn",
 
   glossaryWord: "c-QdLiDUKLm0",
   glossaryRichText: "c-KXNjnKWLkC",

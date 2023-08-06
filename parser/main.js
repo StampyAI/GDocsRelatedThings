@@ -66,6 +66,17 @@ const makeDiscordMessage = (
   };
 };
 
+const updateBanners = (answer) => {
+    let banners = (answer[codaColumnIDs.banners] || '')
+          .split(',')
+          .map((i) => i.trim())
+          .filter((b) => b != 'In progress');
+    if (answer["c-Gr2GDh30nR"] != "Live on site") {
+        banners = ['In progress', ...banners];
+    }
+    return banners.join(',');
+}
+
 const saveAnswer = async (
   answer,
   md,
@@ -84,7 +95,8 @@ const saveAnswer = async (
       suggestionCount,
       suggestionSize,
       commentsCount,
-      alternativePhrasings
+      alternativePhrasings,
+      updateBanners(answer),
     );
   } catch (err) {
     logError("Error while saving to Coda", answer, { message: err.cause });

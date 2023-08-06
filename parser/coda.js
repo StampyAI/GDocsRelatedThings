@@ -94,7 +94,8 @@ export const updateAnswer = async (
   suggestionCount,
   suggestionSize,
   commentsCount,
-  alternativePhrasings
+  alternativePhrasings,
+  banners,
 ) =>
   codaUpdate(`${tableURL}/rows/${id}`, {
     relatedAnswerNames: relatedAnswerNames,
@@ -104,6 +105,7 @@ export const updateAnswer = async (
     commentsCount: commentsCount,
     alternativePhrasings: (alternativePhrasings || []).join("\n"),
     lastIngested: new Date().toISOString(),
+    banners: banners,
   });
 
 export const updateGlossary = async (
