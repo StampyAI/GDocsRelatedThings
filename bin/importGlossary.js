@@ -1,3 +1,4 @@
+import { setTimeout } from "timers/promises";
 import { decode } from "html-entities";
 import { getAnswers, updateGlossary } from "../parser/coda.js";
 import { parseElement } from "../parser/parser.js";
@@ -65,4 +66,14 @@ const rows = parseElement(documentContext)(table)
     answer: getAnswer(row),
   }));
 
-rows.forEach(setGlossary);
+// Use this ugly magic loop thingy to run them sequentially
+rows.reduce(async (previousPromise, item) => {
+    const previousResults = await previousPromise;
+    try {
+        await setTimeout(1000);
+        return [...previousResults, await setGlossary(item)];
+    } catch (err) {
+        console.error(err);
+        return [...previousResults, false];
+    }
+}, Promise.resolve([]));
