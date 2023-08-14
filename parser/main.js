@@ -243,6 +243,7 @@ const parseAllAnswerDocs = async () => {
 
   const results = await allAnswers
     // .filter(({ answerName }) => answerName === "Example with all the formatting")  // Limiting the search for testing purposes
+    // .filter(({ answerName }) => answerName === "")
     // .filter((row) => row["c-Gr2GDh30nR"] != "Live on site")
     .filter((answer) => {
       const lastIngestDateString = answer[codaColumnIDs.lastIngested];

@@ -340,7 +340,7 @@ export const parsetextRun = ({ textStyle, content }) => {
   return (prefix + text + suffix).replace(/\u000B/g, "\n");
 };
 
-export const parserichLink = ({ richLinkProperties: { title, uri } }) => {
+export const parserichLink = ({ richLinkProperties: { title, uri } }, context) => {
   const youtubeURL =
     /^(https?:)?\/\/(www.)?youtube.com\/watch\?v=(?<videoID>[A-z0-9\-_]+)/;
   const youtubeURLShort =
@@ -351,7 +351,7 @@ export const parserichLink = ({ richLinkProperties: { title, uri } }) => {
     uri.match(youtubeURLShort)?.groups?.videoID ||
     null;
 
-  if (videoID) {
+  if (videoID && !context.paragraphContext.bullet) {
     // Many markdown renderers might not like iframes so some clients will need to replace this with the commented out Markdown below
     // Also append two newlines, as that punts any text that's been put in the same paragraph as the link in the GDoc into a new paragraph, which is necessary to ensure some Markdown renderers don't choke. Github-flavoured Markdown in particular seems to refuse to render any additional syntax that's on the same line as an iframe, and just spits everything out as plain text
     return `<iframe src="https://www.youtube.com/embed/${videoID}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>\n\n`;
