@@ -340,7 +340,10 @@ export const parsetextRun = ({ textStyle, content }) => {
   return (prefix + text + suffix).replace(/\u000B/g, "\n");
 };
 
-export const parserichLink = ({ richLinkProperties: { title, uri } }, context) => {
+export const parserichLink = (
+  { richLinkProperties: { title, uri } },
+  context
+) => {
   const youtubeURL =
     /^(https?:)?\/\/(www.)?youtube.com\/watch\?v=(?<videoID>[A-z0-9\-_]+)/;
   const youtubeURLShort =

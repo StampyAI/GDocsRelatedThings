@@ -17,7 +17,11 @@ const setGlossary = async ({ term, aliases, definition, answer }) => {
       definition,
       aliases
     );
-    if (res.status > 300) {
+
+    if (res.status === 429) {
+      // This is fine - Coda sometimes returns this, but later lets it through. It's not a problem
+      // if an answer gets updated a bit later
+    } else if (res.status > 300) {
       await logError(`Could not update glossary item: ${res.statusText}`);
       return false;
     }
@@ -68,12 +72,12 @@ const rows = parseElement(documentContext)(table)
 
 // Use this ugly magic loop thingy to run them sequentially
 rows.reduce(async (previousPromise, item) => {
-    const previousResults = await previousPromise;
-    try {
-        await setTimeout(1000);
-        return [...previousResults, await setGlossary(item)];
-    } catch (err) {
-        console.error(err);
-        return [...previousResults, false];
-    }
+  const previousResults = await previousPromise;
+  try {
+    await setTimeout(1000);
+    return [...previousResults, await setGlossary(item)];
+  } catch (err) {
+    console.error(err);
+    return [...previousResults, false];
+  }
 }, Promise.resolve([]));

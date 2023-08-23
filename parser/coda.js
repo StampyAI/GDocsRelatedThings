@@ -95,7 +95,7 @@ export const updateAnswer = async (
   suggestionSize,
   commentsCount,
   alternativePhrasings,
-  banners,
+  banners
 ) =>
   codaUpdate(`${tableURL}/rows/${id}`, {
     relatedAnswerNames: relatedAnswerNames,

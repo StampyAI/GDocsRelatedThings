@@ -67,15 +67,15 @@ const makeDiscordMessage = (
 };
 
 const updateBanners = (answer) => {
-    let banners = (answer[codaColumnIDs.banners] || '')
-          .split(',')
-          .map((i) => i.trim())
-          .filter((b) => b != 'In progress');
-    if (answer["c-Gr2GDh30nR"] != "Live on site") {
-        banners = ['In progress', ...banners];
-    }
-    return banners.join(',');
-}
+  let banners = (answer[codaColumnIDs.banners] || "")
+    .split(",")
+    .map((i) => i.trim())
+    .filter((b) => b != "In progress");
+  if (answer["c-Gr2GDh30nR"] != "Live on site") {
+    banners = ["In progress", ...banners];
+  }
+  return banners.join(",");
+};
 
 const saveAnswer = async (
   answer,
@@ -96,7 +96,7 @@ const saveAnswer = async (
       suggestionSize,
       commentsCount,
       alternativePhrasings,
-      updateBanners(answer),
+      updateBanners(answer)
     );
   } catch (err) {
     logError("Error while saving to Coda", answer, { message: err.cause });
@@ -150,7 +150,9 @@ export const replaceGdocLinks = (md, allAnswers) =>
           `\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
           "g"
         ),
-          `(/?state=${answer.UIID}&question=${encodeURIComponent(answer.answerName)})`
+        `(/?state=${answer.UIID}&question=${encodeURIComponent(
+          answer.answerName
+        )})`
       ),
     md
   );
