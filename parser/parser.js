@@ -303,13 +303,18 @@ export const parsetextRun = ({ textStyle, content }) => {
   let suffix = "";
 
   if (content.trim() !== "") {
+    if (isType("underline") && !Object.keys(textStyle).includes("link")) {
+      prefix = "<u>" + prefix;
+      suffix += "</u>";
+    }
+
     if (isType("bold")) {
-      prefix += "**";
+      prefix = "**" + prefix;
       suffix += "**";
     }
 
     if (isType("italic")) {
-      prefix += "*";
+      prefix = "*" + prefix;
       suffix += "*";
     }
   }

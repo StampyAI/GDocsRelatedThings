@@ -21,12 +21,18 @@ const setGlossary = async ({ term, aliases, definition, answer }) => {
     if (res.status === 429) {
       // This is fine - Coda sometimes returns this, but later lets it through. It's not a problem
       // if an answer gets updated a bit later
+    }
+    if (res.status === 502) {
+      // A lot of these get returned, but they're not really a problem on this side, so just ignore them
     } else if (res.status > 300) {
-      await logError(`Could not update glossary item: ${res.statusText}`);
+      await logError(
+        `Could not update glossary item: ${res.statusText}`,
+        answer
+      );
       return false;
     }
   } catch (err) {
-    await logError(`Could not update glossary item: ${err}`);
+    await logError(`Could not update glossary item: ${err}`, answer);
     return false;
   }
   return true;
