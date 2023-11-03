@@ -19,7 +19,7 @@ const uploadImage = async (url, metadata) => {
   formData.append("requireSignedURLs", "false");
 
   return sendRequest("v1", "POST", formData).then(
-    (data) => data.result.variants.filter((u) => u.includes("/public"))[0]
+    (data) => data?.result?.variants?.filter((u) => u.includes("/public"))[0]
   );
 };
 

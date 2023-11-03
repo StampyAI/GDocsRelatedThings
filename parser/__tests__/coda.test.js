@@ -163,6 +163,9 @@ describe("updateAnswer", () => {
             column: codaColumnIDs.lastIngested,
             value: mockDate.toISOString(),
           },
+          {
+            column: codaColumnIDs.banners,
+          },
         ],
       },
     });
