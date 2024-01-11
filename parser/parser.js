@@ -46,7 +46,10 @@ const extractRelatedAnswerIDs = (blocks) =>
 const extractAllParagraphs = (blocks) =>
   blocks
     .filter((block) => Object.keys(block).includes("paragraph"))
-    .map((b) => b.paragraph);
+    .map((b) => {
+      console.log("Extract ALL Paragraphs ", b.paragraph)
+      return b.paragraph
+    });
 
 const extractDocParts = (doc) => {
   const sectionHeaders = {
@@ -104,8 +107,16 @@ export const parseDoc = async (doc, answer) => {
     return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
-  const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
+  console.log((">>>>>>>>>><<<<<<>>>>>>>>>>>>>>>>>>>"))
+  console.log("PARAGRAPHS: ")
+  console.log(paragraphs);
+  console.log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 
+  const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
+  console.log("--------------------------------------")
+console.log("PARAGRAPHS mapped joined: ")
+  console.log(`${body}`);
+  console.log("-------------------------")
   const footnotes = extractFootnotes(documentContext, doc);
 
   const md = body + "\n\n" + footnotes;
@@ -223,7 +234,7 @@ export const parseParagraph = (documentContext) => (paragraph) => {
 
   let prefix = "";
   let itemMarker = "";
-  let leadingSpace = "";
+  let leadingSpace = "<div>";
 
   // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
   if (paragraphStyleName.indexOf("HEADING_") === 0) {
@@ -266,7 +277,8 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       leadingSpace +
       itemMarker +
       prefix +
-      md.join("").replaceAll("\n", "\n" + leadingSpace)
+      md.join("").replaceAll("\n", "\n" + leadingSpace)+
+          "</div>"
     );
   }
 };
