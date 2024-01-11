@@ -178,6 +178,8 @@ const makeAnswerProcessor =
       logError("Error while parsing contents", answer, err);
       return false;
     }
+    console.log(`parsed Doc: `)
+      console.log(parsed)
     let {
       md,
       relatedAnswerDocIDs,
