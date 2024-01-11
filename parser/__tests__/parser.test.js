@@ -356,7 +356,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    documentContext.orderedList=1;
+    documentContext.orderedList = 1;
     documentContext.lists["list-id"].listProperties.nestingLevels[1].glyphType =
       "DECIMAL";
     const result = parseParagraph(documentContext)(listItem);
