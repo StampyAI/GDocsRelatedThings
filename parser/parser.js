@@ -94,8 +94,14 @@ export const parseDoc = async (doc, answer) => {
     inlineObjects: doc.inlineObjects,
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
-    orderedList: 1,
+    orderedList: {},
   };
+  let i = Object.keys(documentContext.lists).length;
+
+  while (i--) {
+    documentContext.orderedList[Object.keys(documentContext.lists)[i]] = 1;
+  }
+
   const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
     extractDocParts(doc);
 
@@ -107,7 +113,6 @@ export const parseDoc = async (doc, answer) => {
 
   const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
   const footnotes = extractFootnotes(documentContext, doc);
-
   const md = body + "\n\n" + footnotes;
 
   // Take the maximum of each suggestion's insertions and deletions
@@ -265,7 +270,7 @@ export const parseParagraph = (documentContext) => (paragraph) => {
     const listID = pb.listId;
     const list = documentContext.lists[listID];
     const currentLevel = list.listProperties.nestingLevels[nestingLevel];
-    const orderedList = documentContext.orderedList;
+    const orderedList = documentContext.orderedList[listID];
 
     // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
     // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
@@ -276,7 +281,7 @@ export const parseParagraph = (documentContext) => (paragraph) => {
 
     itemMarker = isOrdered ? orderedList + ". " || "1. " : "- ";
     leadingSpace = new Array(nestingLevel).fill("    ").join("");
-    documentContext.orderedList++;
+    documentContext.orderedList[listID]++;
     return (
       leadingSpace +
       itemMarker +
