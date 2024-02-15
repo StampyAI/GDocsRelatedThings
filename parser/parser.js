@@ -403,8 +403,8 @@ export const parsehorizontalRule = () => {
 export const tableParser = (context) => {
   const paragraphParser = parseParagraph(context);
   const extractRow = ({ tableCells }) =>
-    tableCells.map(
-      ({ content }) => extractAllParagraphs(content).map(paragraphParser)[0]
+    tableCells.map(({ content }) =>
+      extractAllParagraphs(content).map(paragraphParser).join("\n")
     );
 
   return ({ tableRows }) => {

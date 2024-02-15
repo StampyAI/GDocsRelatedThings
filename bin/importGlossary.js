@@ -5,17 +5,20 @@ import { parseElement } from "../parser/parser.js";
 import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
 import { logError } from "../parser/utils.js";
+import { replaceImages } from "../parser/cloudflare.js";
 
-const setGlossary = async ({ term, aliases, definition, answer }) => {
+const setGlossary = async ({ term, aliases, definition, answer, image }) => {
   const phrase = decode(term.trim());
   console.log(`-> ${phrase}`);
   try {
+    const imgMatch = image?.match(/!\[\]\((.*?)\)/);
     const res = await updateGlossary(
       phrase,
       answer?.answerName || "",
       answer?.UIID || "",
       definition,
-      aliases
+      aliases,
+      imgMatch && imgMatch[1]
     );
 
     if (res.status === 429) {
@@ -50,6 +53,7 @@ const extractDocId = (link) => {
 
 const gdocsClient = await getDocsClient();
 const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
+await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
 const documentContext = {
   footnotes: doc.footnotes || {},
   namedStyles: doc.namedStyles,
