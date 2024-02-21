@@ -21,7 +21,7 @@ export const codaColumnIDs = {
   richText: "c-S6ub6E1V-a",
   suggestionCount: "c-sgnPwFMbn8",
   suggestionSize: "c-6DnuBdIZ02",
-  UIID: "c-J0hTr2p6-T",
+  UIID: "c-J0hTr2p6-T", // This is the real UI ID, so careful with changes
   status: "c-Gr2GDh30nR",
   commentsCount: "c-kakZoTgC9y",
   alternativePhrasings: "c-bLWz7lnXHG",

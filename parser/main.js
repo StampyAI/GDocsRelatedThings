@@ -96,7 +96,8 @@ const saveAnswer = async (
       suggestionSize,
       commentsCount,
       alternativePhrasings,
-      updateBanners(answer)
+      updateBanners(answer),
+      answer.UIID
     );
   } catch (err) {
     logError("Error while saving to Coda", answer, { message: err.cause });
@@ -231,6 +232,29 @@ const makeAnswerProcessor =
     );
   };
 
+const idChecker = (allAnswers) => {
+  const ids = allAnswers.map(({ UIID }) => UIID);
+  const idCounts = ids.reduce(
+    (acc, id) => ({ ...acc, [id]: (acc[id] || 0) + 1 }),
+    {}
+  );
+  let maxId = ids.sort().reverse()[0];
+  const next = () => {
+    maxId = (parseInt(maxId, 36) + 1).toString(36).toUpperCase();
+    return maxId;
+  };
+
+  return (answer) => {
+    const uiid = answer.UIID;
+    if (!(uiid || uiid === 0) || !idCounts[uiid] || idCounts[uiid] > 1) {
+      answer.UIID = next();
+      idCounts[uiid] -= 1;
+      console.log(`replaced duplicate UI ID: ${uiid} -> ${answer.UIID}`);
+    }
+    return answer;
+  };
+};
+
 const parseAllAnswerDocs = async () => {
   const allAnswers = await getAnswers(tableURL);
   if (allAnswers.length == 0) throw new Error("No answers found!");
@@ -265,6 +289,7 @@ const parseAllAnswerDocs = async () => {
     })
     // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
     // too often. The `fetch()` is asynchronous, hence the magic with promises here
+    .map(idChecker(allAnswers))
     .reduce(async (previousPromise, answer) => {
       const previousResults = await previousPromise;
       try {
