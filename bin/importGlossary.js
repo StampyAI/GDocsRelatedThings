@@ -84,7 +84,7 @@ const rows = parseElement(documentContext)(table)
 rows.reduce(async (previousPromise, item) => {
   const previousResults = await previousPromise;
   try {
-    await setTimeout(1000);
+    await setTimeout(5000);
     return [...previousResults, await setGlossary(item)];
   } catch (err) {
     console.error(err);
