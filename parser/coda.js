@@ -14,8 +14,7 @@ const codaRequest = async (url, options = { headers: {} }) =>
     },
   });
 
-// Returns a list of tuples, each looking like [answer ID from coda, answer document ID fromn GDocs]
-export const getAnswers = async (tableURL) => {
+const getRows = async (tableURL) => {
   let queryURL = `${tableURL}/rows`;
 
   // Coda only sends a limited number of rows at a time, so track whether we've retrieved all of them yet
@@ -35,9 +34,13 @@ export const getAnswers = async (tableURL) => {
       isScanComplete = true;
     }
   }
+  return rows;
+};
 
+// Returns a list of tuples, each looking like [answer ID from coda, answer document ID fromn GDocs]
+export const getAnswers = async (tableURL) => {
   return (
-    rows
+    (await getRows(tableURL))
       // There are some malformed rows in the table thanks to the Coda / GDocs pack. These are manually set to have a UI ID of -1 so we can filter them out
       .filter((row) => row.values[codaColumnIDs.UIID] !== "-1")
       // do some transformations to keep the data we use downstream and discard what we don't
@@ -56,6 +59,20 @@ export const getAnswers = async (tableURL) => {
   );
 };
 
+export const getGlossary = async () => {
+  return (await getRows(glossaryTableURL)).map((row) => ({
+    id: row.id,
+    href: row.href,
+    word: row.values[codaColumnIDs.glossaryWord],
+    richText: row.values[codaColumnIDs.glossaryRichText],
+    question: row.values[codaColumnIDs.glossaryQuestion],
+    questionId: row.values[codaColumnIDs.glossaryQuestionID],
+    aliases: row.values[codaColumnIDs.glossaryAliases],
+    lastIngested: row.values[codaColumnIDs.glossaryLastIngested],
+    image: row.values[codaColumnIDs.gloassaryImage],
+  }));
+};
+
 const codaMutate = async (url, method, payload) =>
   codaRequest(url, {
     method,
@@ -63,6 +80,9 @@ const codaMutate = async (url, method, payload) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
+
+export const codaDelete = async (url) =>
+  codaRequest(url, { method: "delete", muteHttpExceptions: true });
 
 export const codaUpdate = async (url, values) =>
   codaMutate(url, "put", {

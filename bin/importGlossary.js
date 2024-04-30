@@ -1,11 +1,28 @@
 import { setTimeout } from "timers/promises";
 import { decode } from "html-entities";
-import { getAnswers, updateGlossary } from "../parser/coda.js";
+import {
+  codaDelete,
+  getAnswers,
+  getGlossary,
+  updateGlossary,
+} from "../parser/coda.js";
 import { parseElement } from "../parser/parser.js";
 import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
 import { logError } from "../parser/utils.js";
 import { replaceImages } from "../parser/cloudflare.js";
+
+const syncApply = (items, func) =>
+  items.reduce(async (previousPromise, item) => {
+    const previousResults = await previousPromise;
+    try {
+      await setTimeout(5000);
+      return [...previousResults, await func(item)];
+    } catch (err) {
+      console.error(err);
+      return [...previousResults, false];
+    }
+  }, Promise.resolve([]));
 
 const setGlossary = async ({ term, aliases, definition, answer, image }) => {
   const phrase = decode(term.trim());
@@ -80,14 +97,17 @@ const rows = parseElement(documentContext)(table)
     answer: getAnswer(row),
   }));
 
-// Use this ugly magic loop thingy to run them sequentially
-rows.reduce(async (previousPromise, item) => {
-  const previousResults = await previousPromise;
-  try {
-    await setTimeout(5000);
-    return [...previousResults, await setGlossary(item)];
-  } catch (err) {
-    console.error(err);
-    return [...previousResults, false];
+// Update all glossary entries
+syncApply(rows, setGlossary);
+
+// Remove any items that are in Coda but not in the Gdoc
+const terms = rows.map(({ term }) => term.toLowerCase());
+syncApply(
+  (await getGlossary()).filter(
+    ({ word }) => !terms.includes(word.toLowerCase())
+  ),
+  ({ href, word }) => {
+    console.log(" -> Deleting ", word);
+    return codaDelete(href);
   }
-}, Promise.resolve([]));
+);
