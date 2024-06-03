@@ -206,7 +206,9 @@ export const mergeSameElements = (elements) =>
   elements.reduce((acc, item) => {
     const prev = acc[acc.length - 1];
     if (extractUrl(item) && extractUrl(prev) === extractUrl(item)) {
-      prev.textRun.content += item.textRun.content;
+      if (!item?.textRun?.suggestedInsertionIds) {
+        prev.textRun.content += item.textRun.content;
+      }
     } else {
       acc.push(item);
     }

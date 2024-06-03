@@ -166,6 +166,9 @@ describe("updateAnswer", () => {
           {
             column: codaColumnIDs.banners,
           },
+          {
+            column: "c-J0hTr2p6-T",
+          },
         ],
       },
     });
