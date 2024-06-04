@@ -368,7 +368,16 @@ export const parserichLink = (
       : "";
     // Many markdown renderers might not like iframes so some clients will need to replace this with the commented out Markdown below
     // Also append two newlines, as that punts any text that's been put in the same paragraph as the link in the GDoc into a new paragraph, which is necessary to ensure some Markdown renderers don't choke. Github-flavoured Markdown in particular seems to refuse to render any additional syntax that's on the same line as an iframe, and just spits everything out as plain text
-    return `<iframe src="https://www.youtube.com/embed/${videoID}${extra}" title="${title}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>\n\n`;
+    const iframeParams = [
+      `src="https://www.youtube.com/embed/${videoID}${extra}"`,
+      `title="${title}"`,
+      `style="width: 100%;height: 100%;position: absolute;top: 0;"`,
+      `frameborder="0"`,
+      `allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"`,
+      `allowfullscreen`,
+    ];
+    const iframe = `<iframe ${iframeParams.join(" ")}></iframe>`;
+    return `<div style="position: relative; width: 100%; padding-top: 56.25%;">${iframe}</div>`;
     // return `[![Youtube video - ${title}](https://img.youtube.com/vi/${videoID}/maxresdefault.jpg "${title}")](${uri})`
   } else {
     return `[${title}](${uri})`;
