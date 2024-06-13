@@ -377,7 +377,7 @@ export const parserichLink = (
       `allowfullscreen`,
     ];
     const iframe = `<iframe ${iframeParams.join(" ")}></iframe>`;
-    return `<div style="position: relative; width: 100%; padding-top: 56.25%;">${iframe}</div>`;
+    return `<div style="position: relative; width: 100%; padding-top: 56.25%;">${iframe}</div>\n\n`;
     // return `[![Youtube video - ${title}](https://img.youtube.com/vi/${videoID}/maxresdefault.jpg "${title}")](${uri})`
   } else {
     return `[${title}](${uri})`;
