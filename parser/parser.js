@@ -131,23 +131,30 @@ export const parseDoc = async (doc, answer) => {
 
 // If the doc only contains one paragraph, whose first element which is a link to a LessWrong or EAF tag, do special things
 export const fetchExternalContent = async (paragraphs) => {
-  const nonEmpty = paragraphs.filter(({ elements }) =>
-    elements.some(
-      (element) =>
-        (element?.textRun?.content?.trim() || "") !== "" &&
-        !element?.textRun?.suggestedInsertionIds
+  const texts = paragraphs
+    .map(({ elements }) =>
+      elements
+        .filter(
+          (e) =>
+            e?.textRun?.content?.trim() && !e?.textRun?.suggestedInsertionIds
+        )
+        .map((e) => e?.textRun?.content)
     )
-  );
-  if (nonEmpty.length !== 1 || !nonEmpty[0].elements[0]?.textRun?.content)
-    return null;
+    .flat();
 
-  const text = nonEmpty[0].elements[0].textRun.content;
+  if (texts.length !== 1) return null;
+
+  const text = texts[0];
 
   const tagHandlers = [
     [/https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/, getLWTag],
     [
       /https:\/\/forum.effectivealtruism.org\/topics\/(?<tagName>[A-z0-9_-]+)/,
       getEAFTag,
+    ],
+    [
+      /https:\/\/(www.)?alignmentforum.org\/tag\/(?<tagName>[A-z0-9_-]+)/,
+      getAFTag,
     ],
   ];
 
@@ -160,15 +167,29 @@ export const fetchExternalContent = async (paragraphs) => {
   return null;
 };
 
+const LWGraphQLQuery = async (host, query) => {
+  const result = await fetch(encodeURI(`${host}/graphql?query=${query}`), {
+    timeout: 5000,
+  });
+  return await result.json();
+};
+
 export const getTag = async (host, tagName) => {
-  const result = await fetch(
-    encodeURI(
-      `${host}/graphql?query={tag(input:{selector:{slug:"${tagName}"}}){result{description{markdown}}}}`
-    ),
-    { timeout: 5000 }
+  const tagQuery = `tag(input:{selector:{slug:"${tagName}"}})`;
+  const asMd = await LWGraphQLQuery(
+    host,
+    `{${tagQuery}{result{description{markdown,version}}}}`
   );
-  const contents = await result.json();
-  const md = contents?.data?.tag?.result?.description?.markdown || "";
+
+  if (asMd?.data?.tag?.result?.description?.version < "1.1.0") {
+    const contents = await LWGraphQLQuery(
+      host,
+      `{${tagQuery}{result{htmlWithContributorAnnotations}}}`
+    );
+    return contents?.data?.tag?.result?.htmlWithContributorAnnotations;
+  }
+
+  const md = asMd?.data?.tag?.result?.description?.markdown || "";
 
   // EAF mostly gives us valid markdown but their citations are in a really weird format
   // It's unlike anything I can see in the reference material I'm using to write our markdown
@@ -197,6 +218,7 @@ export const getTag = async (host, tagName) => {
 const getLWTag = (tagName) => getTag("https://www.lesswrong.com", tagName);
 const getEAFTag = (tagName) =>
   getTag("https://forum.effectivealtruism.org", tagName);
+const getAFTag = (tagName) => getTag("https://www.alignmentforum.org", tagName);
 
 const extractUrl = (element) => element?.textRun?.textStyle?.link?.url;
 // Google docs sometime split things that obviously go together into smaller parts.
