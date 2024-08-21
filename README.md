@@ -54,4 +54,4 @@ These are totally optional. If not provided, any logging to Discord will be skip
 
 # Running
 
-`node index.js`
+`node bin/importContent.js`

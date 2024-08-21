@@ -106,10 +106,11 @@ const folders = {
 };
 
 export const moveAnswer = async (drive, answer) => {
-  const folderName =
-    answer[codaColumnIDs.status] == "Live on site"
-      ? "Live on site"
-      : "In progress";
+  const folderName = ["Live on site", "Subsection"].includes(
+    answer[codaColumnIDs.status]
+  )
+    ? "Live on site"
+    : "In progress";
   const folder = folders[folderName];
 
   try {
