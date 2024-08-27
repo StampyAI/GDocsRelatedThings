@@ -94,14 +94,7 @@ export const parseDoc = async (doc, answer) => {
     inlineObjects: doc.inlineObjects,
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
-    orderedList: {},
   };
-  let i = Object.keys(documentContext.lists).length;
-
-  while (i--) {
-    documentContext.orderedList[Object.keys(documentContext.lists)[i]] = 1;
-  }
-
   const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
     extractDocParts(doc);
 
@@ -111,7 +104,8 @@ export const parseDoc = async (doc, answer) => {
     return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
-  const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
+  const paragrapherParser = parseParagraph(documentContext, paragraphs);
+  const body = paragraphs.map(paragrapherParser).join("\n\n");
   const footnotes = extractFootnotes(documentContext, doc);
   const md = body + "\n\n" + footnotes;
 
@@ -243,6 +237,34 @@ export const mergeSameElements = (elements) =>
   }, []);
 
 export const parseParagraph = (documentContext, allParagraphs) => {
+  // Using the startIndex of the first element of the paragraph
+  // Assuming that each paragraph has at least one element
+  const paragraphIdGenerator = (paragraph) => {
+    const firstElement = paragraph.elements[0];
+    return firstElement.startIndex;
+  };
+
+  // The order numbers for paragraph bullets are stored to then be used in the actual parsing
+  // This is done separately from the parsing because it must be done on the paragraphs in order
+  // Once the bullet orders are determined then further parsing could be done out of order
+  const bulletOrderNumbers = new Map();
+  const listBulletCounter = new Map();
+  allParagraphs.forEach((paragraph) => {
+    const { elements, ...paragraphContext } = paragraph;
+    if (paragraphContext.bullet) {
+      const pb = paragraphContext.bullet;
+      // TODO: Check if nesting needs to be considered
+      // const nestingLevel = pb.nestingLevel || 0;
+      const listId = pb.listId;
+      if (!listBulletCounter.has(listId)) {
+        listBulletCounter.set(listId, 0);
+      }
+      const paragraphOrderNum = listBulletCounter.get(listId) + 1;
+      const paragraphId = paragraphIdGenerator(paragraph);
+      bulletOrderNumbers.set(paragraphId, paragraphOrderNum);
+      listBulletCounter.set(listId, paragraphOrderNum);
+    }
+  });
 
   return (paragraph) => {
     const { elements, ...paragraphContext } = paragraph;
@@ -272,7 +294,6 @@ export const parseParagraph = (documentContext, allParagraphs) => {
       const listID = pb.listId;
       const list = documentContext.lists[listID];
       const currentLevel = list.listProperties.nestingLevels[nestingLevel];
-      const orderedList = documentContext.orderedList[listID];
 
       // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
       // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
@@ -281,9 +302,18 @@ export const parseParagraph = (documentContext, allParagraphs) => {
         currentLevel.hasOwnProperty("glyphType") &&
         currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
 
-      itemMarker = isOrdered ? orderedList + ". " || "1. " : "- ";
+      const getBulletOrder = (paragraph) => {
+        const paragraphId = paragraphIdGenerator(paragraph);
+        const orderNumber = bulletOrderNumbers.get(paragraphId);
+        if (!orderNumber) {
+          throw new Error(
+            "Order number should be available for all ordered paragraphs"
+          );
+        }
+        return orderNumber;
+      };
+      itemMarker = isOrdered ? getBulletOrder(paragraph) + ". " : "- ";
       leadingSpace = new Array(nestingLevel).fill("    ").join("");
-      documentContext.orderedList[listID]++;
       return (
         leadingSpace +
         itemMarker +
@@ -440,11 +470,12 @@ export const parsehorizontalRule = () => {
 };
 
 export const tableParser = (context) => {
-  const paragraphParser = parseParagraph(context);
   const extractRow = ({ tableCells }) =>
-    tableCells.map(({ content }) =>
-      extractAllParagraphs(content).map(paragraphParser).join("\n")
-    );
+    tableCells.map(({ content }) => {
+      const paragraphs = extractAllParagraphs(content);
+      const paragraphParser = parseParagraph(context, paragraphs);
+      paragraphs.map(paragraphParser).join("\n");
+    });
 
   return ({ tableRows }) => {
     const rawRows = tableRows.map(extractRow);
