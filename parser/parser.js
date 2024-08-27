@@ -242,60 +242,63 @@ export const mergeSameElements = (elements) =>
     return acc;
   }, []);
 
-export const parseParagraph = (documentContext) => (paragraph) => {
-  const { elements, ...paragraphContext } = paragraph;
-  const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
+export const parseParagraph = (documentContext, allParagraphs) => {
 
-  let md = mergeSameElements(elements).map(
-    parseElement({ documentContext, paragraphContext })
-  );
+  return (paragraph) => {
+    const { elements, ...paragraphContext } = paragraph;
+    const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
 
-  let prefix = "";
-  let itemMarker = "";
-  let leadingSpace = "";
-
-  // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
-  if (paragraphStyleName.indexOf("HEADING_") === 0) {
-    const headingLevel = parseInt(paragraphStyleName[8]);
-    const headingPrefix = new Array(headingLevel).fill("#").join("") + " ";
-    prefix = headingPrefix;
-  }
-
-  if (md.join("").trim() === "") {
-    // If the paragraph is empty (e.g. consists only of suggestions), then ignore it
-    return "";
-  } else if (paragraphContext.bullet) {
-    const pb = paragraphContext.bullet;
-    const nestingLevel = pb.nestingLevel || 0;
-    const listID = pb.listId;
-    const list = documentContext.lists[listID];
-    const currentLevel = list.listProperties.nestingLevels[nestingLevel];
-    const orderedList = documentContext.orderedList[listID];
-
-    // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
-    // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
-    // Anyway, ordered lists specify a "glyphType" while unordered ones specify a "glyphSymbol" so we're using that as a discriminator
-    const isOrdered =
-      currentLevel.hasOwnProperty("glyphType") &&
-      currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
-
-    itemMarker = isOrdered ? orderedList + ". " || "1. " : "- ";
-    leadingSpace = new Array(nestingLevel).fill("    ").join("");
-    documentContext.orderedList[listID]++;
-    return (
-      leadingSpace +
-      itemMarker +
-      prefix +
-      md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
+    let md = mergeSameElements(elements).map(
+      parseElement({ documentContext, paragraphContext })
     );
-  } else {
-    return (
-      leadingSpace +
-      itemMarker +
-      prefix +
-      md.join("").replaceAll("\n", "\n" + leadingSpace)
-    );
-  }
+
+    let prefix = "";
+    let itemMarker = "";
+    let leadingSpace = "";
+
+    // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
+    if (paragraphStyleName.indexOf("HEADING_") === 0) {
+      const headingLevel = parseInt(paragraphStyleName[8]);
+      const headingPrefix = new Array(headingLevel).fill("#").join("") + " ";
+      prefix = headingPrefix;
+    }
+
+    if (md.join("").trim() === "") {
+      // If the paragraph is empty (e.g. consists only of suggestions), then ignore it
+      return "";
+    } else if (paragraphContext.bullet) {
+      const pb = paragraphContext.bullet;
+      const nestingLevel = pb.nestingLevel || 0;
+      const listID = pb.listId;
+      const list = documentContext.lists[listID];
+      const currentLevel = list.listProperties.nestingLevels[nestingLevel];
+      const orderedList = documentContext.orderedList[listID];
+
+      // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
+      // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
+      // Anyway, ordered lists specify a "glyphType" while unordered ones specify a "glyphSymbol" so we're using that as a discriminator
+      const isOrdered =
+        currentLevel.hasOwnProperty("glyphType") &&
+        currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
+
+      itemMarker = isOrdered ? orderedList + ". " || "1. " : "- ";
+      leadingSpace = new Array(nestingLevel).fill("    ").join("");
+      documentContext.orderedList[listID]++;
+      return (
+        leadingSpace +
+        itemMarker +
+        prefix +
+        md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
+      );
+    } else {
+      return (
+        leadingSpace +
+        itemMarker +
+        prefix +
+        md.join("").replaceAll("\n", "\n" + leadingSpace)
+      );
+    }
+  };
 };
 
 const isGrey = (textStyle) => {

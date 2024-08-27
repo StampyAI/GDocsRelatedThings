@@ -281,9 +281,6 @@ describe("parseParagraph", () => {
         },
       },
     },
-    orderedList: {
-      "list-id": 1,
-    },
   };
 
   const paragraph = {
@@ -341,7 +338,6 @@ describe("parseParagraph", () => {
       paragraphStyle: { namedStyleType: "HEADING_1" },
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    documentContext.orderedList["list-id"] = 1;
     const result = parseParagraph(documentContext)(heading);
     expect(result).toEqual("    - # Hello, world!");
   });
