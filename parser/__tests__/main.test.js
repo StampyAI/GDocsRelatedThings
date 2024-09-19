@@ -10,17 +10,29 @@ describe("replaceGdocLinks", () => {
     "https://docs.google.com/document/d/123/edit?usp=drivesdk",
   ])("Gdoc urls get transformed", (url) => {
     const result = replaceGdocLinks(`A link [here](${url})`, [
-      { docID: "123", UIID: "90Q3", answerName: "blee" },
+      {
+        docID: "123",
+        UIID: "90Q3",
+        answerName: "blee",
+        "c-Gr2GDh30nR": "Live on site",
+      },
     ]);
-    expect(result).toEqual("A link [here](/?state=90Q3&question=blee)");
+    expect(result).toEqual("A link [here](/questions/90Q3/blee)");
   });
 
   it("strips whitespace", () => {
     const result = replaceGdocLinks(
       `A link [here](      https://docs.google.com/document/d/123      )`,
-      [{ docID: "123", UIID: "90Q3", answerName: "blee" }]
+      [
+        {
+          docID: "123",
+          UIID: "90Q3",
+          answerName: "blee",
+          "c-Gr2GDh30nR": "Live on site",
+        },
+      ]
     );
-    expect(result).toEqual("A link [here](/?state=90Q3&question=blee)");
+    expect(result).toEqual("A link [here](/questions/90Q3/blee)");
   });
 
   it("ignores gdoc urls that aren't markdown links", () => {

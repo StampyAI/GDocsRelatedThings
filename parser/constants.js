@@ -3,6 +3,10 @@ dotenv.config();
 
 export const GLOSSARY_DOC = "1Rm7tN5zTErZq0E4qqAZoNVzClS94Kb_rQOLaViu2p6c";
 
+export const IN_PROGRESS = "In progress";
+export const UNLISTED = "Unlisted";
+export const LIVE_ON_SITE = "Live on site";
+
 export const basePath = "https://coda.io/apis/v1/";
 export const codaDocID = "fau7sl2hmG";
 export const codaDocURL = `${basePath}/docs/${codaDocID}`;

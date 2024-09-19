@@ -15,6 +15,9 @@ import {
   tableID,
   tableURL,
   codaColumnIDs,
+  LIVE_ON_SITE,
+  IN_PROGRESS,
+  UNLISTED,
 } from "./constants.js";
 import { replaceImages } from "./cloudflare.js";
 
@@ -70,9 +73,10 @@ const updateBanners = (answer) => {
   let banners = (answer[codaColumnIDs.banners] || "")
     .split(",")
     .map((i) => i.trim())
-    .filter((b) => b != "In progress");
-  if (answer["c-Gr2GDh30nR"] != "Live on site") {
-    banners = ["In progress", ...banners];
+    .filter((b) => ![IN_PROGRESS, UNLISTED].includes(b));
+  const status = answer[codaColumnIDs.status];
+  if (status != LIVE_ON_SITE) {
+    banners = [status === UNLISTED ? UNLISTED : IN_PROGRESS, ...banners];
   }
   return banners.join(",");
 };
@@ -144,19 +148,21 @@ const saveAnswer = async (
 };
 
 export const replaceGdocLinks = (md, allAnswers) =>
-  allAnswers.reduce(
-    (md, answer) =>
-      md.replaceAll(
-        new RegExp(
-          `\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
-          "g"
-        ),
-        `(/?state=${answer.UIID}&question=${encodeURIComponent(
-          answer.answerName
-        )})`
-      ),
-    md
-  );
+  allAnswers.reduce((acc, answer) => {
+    const status = answer[codaColumnIDs.status];
+    const regex = new RegExp(
+      `\\[(.*?)\\]\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
+      "g"
+    );
+
+    return acc.replace(regex, (match, p1) =>
+      [LIVE_ON_SITE, UNLISTED].includes(status)
+        ? `[${p1}](/questions/${answer.UIID}/${encodeURIComponent(
+            answer.answerName
+          )})`
+        : p1
+    );
+  }, md);
 
 const makeAnswerProcessor =
   (allAnswers, gdocsClient, gdriveClient) => async (answer) => {
