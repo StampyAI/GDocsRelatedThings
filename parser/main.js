@@ -151,7 +151,7 @@ export const replaceGdocLinks = (md, allAnswers) =>
   allAnswers.reduce((acc, answer) => {
     const status = answer[codaColumnIDs.status];
     const regex = new RegExp(
-      `\\[([^\]]*?)\\]\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
+      `\\[([^\\]]*?)\\]\\(\\s*?https://docs.google.com/document/(u/)?(0/)?d/${answer.docID}[^)]*?\\)`,
       "g"
     );
 
