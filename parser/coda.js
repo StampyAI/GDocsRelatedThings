@@ -124,7 +124,7 @@ export const updateAnswer = async (
     preexistingSuggestionCount: suggestionCount,
     preexistingSuggestionSize: suggestionSize,
     commentsCount: commentsCount,
-    alternativePhrasings: alternativePhrasings,
+    alternativePhrasings: (alternativePhrasings || []).join("\n"),
     lastIngested: new Date().toISOString(),
     banners: banners,
     UIID: uiid,
