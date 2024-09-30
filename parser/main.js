@@ -204,13 +204,6 @@ const makeAnswerProcessor =
         });
       }
     );
-    const uniqueAlternatives = [
-      ...new Set(
-        alternativePhrasings.concat(
-          (answer[codaColumnIDs.alternativePhrasings] || "").split("\n")
-        )
-      ),
-    ].map((i) => i.trim());
 
     const relatedAnswerNames = validRelatedAnswers.map(
       (relatedAnswerDocID) =>
@@ -228,7 +221,7 @@ const makeAnswerProcessor =
       suggestionCount,
       suggestionSize,
       commentsCount,
-      uniqueAlternatives
+      alternativePhrasings
     );
 
     return (
