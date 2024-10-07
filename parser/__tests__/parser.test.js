@@ -285,25 +285,37 @@ describe("parseParagraph", () => {
 
   const paragraph = {
     elements: [
-      { textRun: { content: "Hello, " } },
-      { textRun: { content: "world!" } },
+      {
+        startIndex: 1,
+        textRun: { content: "Hello, " },
+      },
+      {
+        startIndex: 2,
+        textRun: { content: "world!" },
+      },
     ],
     paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
   };
 
+  const setupParserAndParse = (paragraph, context = documentContext) => {
+    const allParagraphs = [paragraph];
+    return parseParagraph(context, allParagraphs)(paragraph);
+  };
+
   it("should handle empty paragraphs", () => {
-    const result = parseParagraph(documentContext)({
+    const paragraph = {
       elements: [
         { textRun: { content: "  \n \n " } },
         { textRun: { content: "" } },
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
-    });
+    };
+    const result = setupParserAndParse(paragraph);
     expect(result).toEqual("");
   });
 
   it("should paragraphs that are suggestions", () => {
-    const result = parseParagraph(documentContext)({
+    const paragraph = {
       elements: [
         {
           textRun: {
@@ -314,12 +326,13 @@ describe("parseParagraph", () => {
         { textRun: { content: "As is this", suggestedInsertionIds: ["2"] } },
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
-    });
+    };
+    const result = setupParserAndParse(paragraph);
     expect(result).toEqual("");
   });
 
   it("should return a plain paragraph without any formatting", () => {
-    const result = parseParagraph(documentContext)(paragraph);
+    const result = setupParserAndParse(paragraph);
     expect(result).toEqual("Hello, world!");
   });
 
@@ -328,7 +341,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       paragraphStyle: { namedStyleType: "HEADING_1" },
     };
-    const result = parseParagraph(documentContext)(heading);
+    const result = setupParserAndParse(heading);
     expect(result).toEqual("# Hello, world!");
   });
 
@@ -338,7 +351,7 @@ describe("parseParagraph", () => {
       paragraphStyle: { namedStyleType: "HEADING_1" },
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = parseParagraph(documentContext)(heading);
+    const result = setupParserAndParse(heading);
     expect(result).toEqual("    - # Hello, world!");
   });
 
@@ -347,20 +360,30 @@ describe("parseParagraph", () => {
       ...paragraph,
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = parseParagraph(documentContext)(listItem);
+    const result = setupParserAndParse(listItem);
     expect(result).toEqual("    - Hello, world!");
   });
 
   it("should return an ordered list item", () => {
     const listItem = {
       ...paragraph,
-      bullet: { nestingLevel: 1, listId: "list-id" },
+      bullet: { listId: "list-id" },
     };
-    documentContext.orderedList["list-id"] = 1;
-    documentContext.lists["list-id"].listProperties.nestingLevels[1].glyphType =
-      "DECIMAL";
-    const result = parseParagraph(documentContext)(listItem);
-    expect(result).toEqual("    1. Hello, world!");
+    const context = {
+      ...documentContext,
+      orderedList: {
+        "list-id": 1,
+      },
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [{ glyphType: "DECIMAL" }],
+          },
+        },
+      },
+    };
+    const result = setupParserAndParse(listItem, context);
+    expect(result).toEqual("1. Hello, world!");
   });
 });
 
