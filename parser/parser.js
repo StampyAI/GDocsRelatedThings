@@ -260,9 +260,12 @@ export const parseParagraph = (documentContext, allParagraphs) => {
         listBulletCounter.set(listId, 0);
       }
       const paragraphOrderNum = listBulletCounter.get(listId) + 1;
-      const paragraphId = paragraphIdGenerator(paragraph);
-      bulletOrderNumbers.set(paragraphId, paragraphOrderNum);
       listBulletCounter.set(listId, paragraphOrderNum);
+      const paragraphId = paragraphIdGenerator(paragraph);
+      if (bulletOrderNumbers.has(paragraphId)) {
+        throw new Error("ParagraphId should be unique for each paragraph");
+      }
+      bulletOrderNumbers.set(paragraphId, paragraphOrderNum);
     }
   });
 
