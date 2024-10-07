@@ -297,11 +297,6 @@ describe("parseParagraph", () => {
     paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
   };
 
-  const setupParserAndParse = (paragraph, context = documentContext) => {
-    const allParagraphs = [paragraph];
-    return parseParagraph(context, allParagraphs)(paragraph);
-  };
-
   it("should handle empty paragraphs", () => {
     const paragraph = {
       elements: [
@@ -310,7 +305,7 @@ describe("parseParagraph", () => {
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
     };
-    const result = setupParserAndParse(paragraph);
+    const result = parseParagraph(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("");
   });
 
@@ -327,12 +322,12 @@ describe("parseParagraph", () => {
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
     };
-    const result = setupParserAndParse(paragraph);
+    const result = parseParagraph(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("");
   });
 
   it("should return a plain paragraph without any formatting", () => {
-    const result = setupParserAndParse(paragraph);
+    const result = parseParagraph(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("Hello, world!");
   });
 
@@ -341,7 +336,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       paragraphStyle: { namedStyleType: "HEADING_1" },
     };
-    const result = setupParserAndParse(heading);
+    const result = parseParagraph(documentContext, [heading])(heading);
     expect(result).toEqual("# Hello, world!");
   });
 
@@ -351,7 +346,7 @@ describe("parseParagraph", () => {
       paragraphStyle: { namedStyleType: "HEADING_1" },
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = setupParserAndParse(heading);
+    const result = parseParagraph(documentContext, [heading])(heading);
     expect(result).toEqual("    - # Hello, world!");
   });
 
@@ -360,7 +355,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = setupParserAndParse(listItem);
+    const result = parseParagraph(documentContext, [listItem])(listItem);
     expect(result).toEqual("    - Hello, world!");
   });
 
@@ -371,9 +366,6 @@ describe("parseParagraph", () => {
     };
     const context = {
       ...documentContext,
-      orderedList: {
-        "list-id": 1,
-      },
       lists: {
         "list-id": {
           listProperties: {
@@ -382,7 +374,7 @@ describe("parseParagraph", () => {
         },
       },
     };
-    const result = setupParserAndParse(listItem, context);
+    const result = parseParagraph(context, [listItem])(listItem);
     expect(result).toEqual("1. Hello, world!");
   });
 });
