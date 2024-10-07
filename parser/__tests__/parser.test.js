@@ -283,19 +283,22 @@ describe("parseParagraph", () => {
     },
   };
 
-  const paragraph = {
-    elements: [
-      {
-        startIndex: 1,
-        textRun: { content: "Hello, " },
-      },
-      {
-        startIndex: 2,
-        textRun: { content: "world!" },
-      },
-    ],
-    paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+  const getParagraph = (startIndex, runCount) => {
+    const elements = [];
+    for (let i = 0; i < runCount; i++) {
+      elements.push({
+        startIndex: startIndex + i,
+        textRun: {
+          content: i % 2 == 0 ? "Hello, " : "world!",
+        },
+      });
+    }
+    return {
+      elements,
+      paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+    };
   };
+  const paragraph = getParagraph(1, 2);
 
   it("should handle empty paragraphs", () => {
     const paragraph = {
@@ -376,6 +379,34 @@ describe("parseParagraph", () => {
     };
     const result = parseParagraph(context, [listItem])(listItem);
     expect(result).toEqual("1. Hello, world!");
+  });
+
+  it("should parse a list with several items", () => {
+    const paragraphCount = 2;
+    const paragraphs = [];
+    for (let i = 0; i < paragraphCount; i++) {
+      const runCount = 2;
+      const paragraph = getParagraph(i * runCount + 1, runCount);
+      const listItem = {
+        ...paragraph,
+        bullet: { listId: "list-id" },
+      };
+      paragraphs.push(listItem);
+    }
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [{ glyphType: "DECIMAL" }],
+          },
+        },
+      },
+    };
+    const result1 = parseParagraph(context, paragraphs)(paragraphs[0]);
+    expect(result1).toEqual("1. Hello, world!");
+    const result2 = parseParagraph(context, paragraphs)(paragraphs[1]);
+    expect(result2).toEqual("2. Hello, world!");
   });
 });
 
