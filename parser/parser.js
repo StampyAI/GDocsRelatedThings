@@ -353,8 +353,8 @@ export const parsetextRun = ({ textStyle, content }) => {
   // Markdown doesn't handle **THIS IS SOME BOLD TEXT ** correctly so we need to move that whitespace outside of the formatting markers.
   // Though sometimes strings consisting of only spaces come, and those should be left alone.
   if (content.trim() !== "") {
-    const leadingSpaceRegex = /^ */;
-    const trailingSpaceRegex = / *$/;
+    const leadingSpaceRegex = /^\s+/u;
+    const trailingSpaceRegex = /\s+$/u;
     prefix = (content.match(leadingSpaceRegex)?.[0] || "") + prefix;
     suffix = suffix + (content.match(trailingSpaceRegex)?.[0] || "");
     text = text.trim();
