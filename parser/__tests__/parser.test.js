@@ -302,19 +302,18 @@ describe("parseParagraph", () => {
   };
 
   it("should handle empty paragraphs", () => {
-    const paragraph = {
+    const result = parseParagraph(documentContext)({
       elements: [
         { textRun: { content: "  \n \n " } },
         { textRun: { content: "" } },
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
-    };
-    const result = parseParagraph(documentContext, [paragraph])(paragraph);
+    });
     expect(result).toEqual("");
   });
 
   it("should paragraphs that are suggestions", () => {
-    const paragraph = {
+    const result = parseParagraph(documentContext)({
       elements: [
         {
           textRun: {
@@ -325,8 +324,7 @@ describe("parseParagraph", () => {
         { textRun: { content: "As is this", suggestedInsertionIds: ["2"] } },
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
-    };
-    const result = parseParagraph(documentContext)(paragraph);
+    });
     expect(result).toEqual("");
   });
 

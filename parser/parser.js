@@ -105,9 +105,9 @@ export const parseDoc = async (doc, answer) => {
     return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
-  const paragrapherParser = parseParagraph(documentContext);
-  const body = paragraphs.map(paragrapherParser).join("\n\n");
+  const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
   const footnotes = extractFootnotes(documentContext, doc);
+
   const md = body + "\n\n" + footnotes;
 
   // Take the maximum of each suggestion's insertions and deletions
