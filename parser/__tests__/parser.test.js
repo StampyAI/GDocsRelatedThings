@@ -4,7 +4,7 @@ import {
   parseDoc,
   fetchExternalContent,
   getTag,
-  makeParser,
+  parseParagraph,
   parsetextRun,
   parserichLink,
   parseinlineObjectElement,
@@ -12,6 +12,7 @@ import {
   parsefootnoteReference,
   parseElement,
   mergeSameElements,
+  makeBulletOrderMap,
 } from "../parser.js";
 
 fetchMock.enableMocks();
@@ -269,20 +270,6 @@ describe("parseElement", () => {
 });
 
 describe("parseParagraph", () => {
-  const documentContext = {
-    lists: {
-      "list-id": {
-        listProperties: {
-          nestingLevels: [
-            { glyphSymbol: "•" },
-            { glyphSymbol: "◦" },
-            { glyphSymbol: "▪" },
-          ],
-        },
-      },
-    },
-  };
-
   const getParagraph = (startIndex, runCount) => {
     const elements = [];
     for (let i = 0; i < runCount; i++) {
@@ -300,6 +287,20 @@ describe("parseParagraph", () => {
   };
   const paragraph = getParagraph(1, 2);
 
+  const documentContext = {
+    lists: {
+      "list-id": {
+        listProperties: {
+          nestingLevels: [
+            { glyphSymbol: "•" },
+            { glyphSymbol: "◦" },
+            { glyphSymbol: "▪" },
+          ],
+        },
+      },
+    },
+  };
+
   it("should handle empty paragraphs", () => {
     const paragraph = {
       elements: [
@@ -308,7 +309,7 @@ describe("parseParagraph", () => {
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
     };
-    const result = makeParser(documentContext, [paragraph])(paragraph);
+    const result = parseParagraph(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("");
   });
 
@@ -325,12 +326,12 @@ describe("parseParagraph", () => {
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
     };
-    const result = makeParser(documentContext, [paragraph])(paragraph);
+    const result = parseParagraph(documentContext)(paragraph);
     expect(result).toEqual("");
   });
 
   it("should return a plain paragraph without any formatting", () => {
-    const result = makeParser(documentContext, [paragraph])(paragraph);
+    const result = parseParagraph(documentContext)(paragraph);
     expect(result).toEqual("Hello, world!");
   });
 
@@ -339,7 +340,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       paragraphStyle: { namedStyleType: "HEADING_1" },
     };
-    const result = makeParser(documentContext, [heading])(heading);
+    const result = parseParagraph(documentContext)(heading);
     expect(result).toEqual("# Hello, world!");
   });
 
@@ -349,7 +350,7 @@ describe("parseParagraph", () => {
       paragraphStyle: { namedStyleType: "HEADING_1" },
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = makeParser(documentContext, [heading])(heading);
+    const result = parseParagraph(documentContext)(heading);
     expect(result).toEqual("    - # Hello, world!");
   });
 
@@ -358,7 +359,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = makeParser(documentContext, [listItem])(listItem);
+    const result = parseParagraph(documentContext)(listItem);
     expect(result).toEqual("    - Hello, world!");
   });
 
@@ -376,8 +377,9 @@ describe("parseParagraph", () => {
           },
         },
       },
+      getBulletOrderNumber: makeBulletOrderMap([listItem]),
     };
-    const result = makeParser(context, [listItem])(listItem);
+    const result = parseParagraph(context)(listItem);
     expect(result).toEqual("1. Hello, world!");
   });
 
@@ -402,8 +404,9 @@ describe("parseParagraph", () => {
           },
         },
       },
+      getBulletOrderNumber: makeBulletOrderMap(paragraphs),
     };
-    const parseWithContext = makeParser(context, paragraphs);
+    const parseWithContext = parseParagraph(context, paragraphs);
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);
@@ -433,8 +436,9 @@ describe("parseParagraph", () => {
         "list-id-0": decimalList,
         "list-id-1": decimalList,
       },
+      getBulletOrderNumber: makeBulletOrderMap(paragraphs),
     };
-    const parseWithContext = makeParser(context, paragraphs);
+    const parseWithContext = parseParagraph(context, paragraphs);
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);
@@ -465,8 +469,9 @@ describe("parseParagraph", () => {
           },
         },
       },
+      getBulletOrderNumber: makeBulletOrderMap(paragraphs),
     };
-    const parseWithContext = makeParser(context, paragraphs);
+    const parseWithContext = parseParagraph(context, paragraphs);
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);

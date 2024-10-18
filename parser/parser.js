@@ -86,6 +86,9 @@ const extractDocParts = (doc) => {
 };
 
 export const parseDoc = async (doc, answer) => {
+  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
+    extractDocParts(doc);
+
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
   const documentContext = {
@@ -94,17 +97,15 @@ export const parseDoc = async (doc, answer) => {
     inlineObjects: doc.inlineObjects,
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
+    getBulletOrderNumber: makeBulletOrderMap(paragraphs),
   };
-  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
-    extractDocParts(doc);
-
   // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
     return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
-  const paragrapherParser = makeParser(documentContext, paragraphs);
+  const paragrapherParser = parseParagraph(documentContext);
   const body = paragraphs.map(paragrapherParser).join("\n\n");
   const footnotes = extractFootnotes(documentContext, doc);
   const md = body + "\n\n" + footnotes;
@@ -236,19 +237,12 @@ export const mergeSameElements = (elements) =>
     return acc;
   }, []);
 
-export const makeParser = (docContext, allParagraphs) => (paragraph) => {
-  return parseParagraph(
-    docContext,
-    generateBulletOrderMap(allParagraphs)
-  )(paragraph);
-};
-
-const parseParagraph = (docContext, bulletOrderNums) => (paragraph) => {
+export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
   const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
 
   let md = mergeSameElements(elements).map(
-    parseElement({ documentContext: docContext, paragraphContext })
+    parseElement({ documentContext, paragraphContext })
   );
 
   let prefix = "";
@@ -269,7 +263,7 @@ const parseParagraph = (docContext, bulletOrderNums) => (paragraph) => {
     const pb = paragraphContext.bullet;
     const nestingLevel = pb.nestingLevel || 0;
     const listID = pb.listId;
-    const list = docContext.lists[listID];
+    const list = documentContext.lists[listID];
     const currentLevel = list.listProperties.nestingLevels[nestingLevel];
     if (!currentLevel) {
       throw new Error(
@@ -285,8 +279,7 @@ const parseParagraph = (docContext, bulletOrderNums) => (paragraph) => {
       currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
 
     const getBulletOrder = (paragraph) => {
-      const paragraphId = paragraphIdGenerator(paragraph);
-      const orderNumber = bulletOrderNums.get(paragraphId);
+      const orderNumber = documentContext.getBulletOrderNumber(paragraph);
       if (!orderNumber) {
         throw new Error(
           "Order number should be available for all ordered paragraphs"
@@ -312,7 +305,14 @@ const parseParagraph = (docContext, bulletOrderNums) => (paragraph) => {
   }
 };
 
-const generateBulletOrderMap = (paragraphs) => {
+export const makeBulletOrderMap = (paragraphs) => {
+  // Using the startIndex of the first element of the paragraph
+  // Assuming that each paragraph has at least one element
+  const getParagraphId = (paragraph) => {
+    const firstElement = paragraph.elements[0];
+    return firstElement.startIndex;
+  };
+
   // The order numbers for paragraph bullets are stored to then be used in the actual parsing
   // This is done separately from the parsing because it must be done on the paragraphs in order
   // Once the bullet orders are determined then further parsing could be done out of order
@@ -331,20 +331,17 @@ const generateBulletOrderMap = (paragraphs) => {
     const paragraphOrderNum = (listCounter.get(nestingLevel) || 0) + 1;
     listCounter.set(nestingLevel, paragraphOrderNum);
 
-    const paragraphId = paragraphIdGenerator(paragraph);
+    const paragraphId = getParagraphId(paragraph);
     if (bulletOrderNumbers.has(paragraphId)) {
       throw new Error("ParagraphId should be unique for each paragraph");
     }
     bulletOrderNumbers.set(paragraphId, paragraphOrderNum);
   });
-  return bulletOrderNumbers;
-};
 
-// Using the startIndex of the first element of the paragraph
-// Assuming that each paragraph has at least one element
-const paragraphIdGenerator = (paragraph) => {
-  const firstElement = paragraph.elements[0];
-  return firstElement.startIndex;
+  return (paragraph) => {
+    const paragraphId = getParagraphId(paragraph);
+    return bulletOrderNumbers.get(paragraphId);
+  };
 };
 
 const isGrey = (textStyle) => {
@@ -486,12 +483,11 @@ export const parsehorizontalRule = () => {
 };
 
 export const tableParser = (context) => {
+  const paragraphParser = parseParagraph(context);
   const extractRow = ({ tableCells }) =>
-    tableCells.map(({ content }) => {
-      const paragraphs = extractAllParagraphs(content);
-      const paragraphParser = makeParser(context, paragraphs);
-      paragraphs.map(paragraphParser).join("\n");
-    });
+    tableCells.map(({ content }) =>
+      extractAllParagraphs(content).map(paragraphParser).join("\n")
+    );
 
   return ({ tableRows }) => {
     const rawRows = tableRows.map(extractRow);
