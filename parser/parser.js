@@ -104,7 +104,7 @@ export const parseDoc = async (doc, answer) => {
     return { md: tagContent, relatedAnswerDocIDs, alternativePhrasings };
   }
 
-  const paragrapherParser = parseParagraph(documentContext, paragraphs);
+  const paragrapherParser = makeParser(documentContext, paragraphs);
   const body = paragraphs.map(paragrapherParser).join("\n\n");
   const footnotes = extractFootnotes(documentContext, doc);
   const md = body + "\n\n" + footnotes;
@@ -236,20 +236,89 @@ export const mergeSameElements = (elements) =>
     return acc;
   }, []);
 
-export const parseParagraph = (documentContext, allParagraphs) => {
-  // Using the startIndex of the first element of the paragraph
-  // Assuming that each paragraph has at least one element
-  const paragraphIdGenerator = (paragraph) => {
-    const firstElement = paragraph.elements[0];
-    return firstElement.startIndex;
-  };
+export const makeParser = (docContext, allParagraphs) => (paragraph) => {
+  return parseParagraph(
+    docContext,
+    generateBulletOrderMap(allParagraphs)
+  )(paragraph);
+};
 
+const parseParagraph = (docContext, bulletOrderNums) => (paragraph) => {
+  const { elements, ...paragraphContext } = paragraph;
+  const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
+
+  let md = mergeSameElements(elements).map(
+    parseElement({ documentContext: docContext, paragraphContext })
+  );
+
+  let prefix = "";
+  let itemMarker = "";
+  let leadingSpace = "";
+
+  // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
+  if (paragraphStyleName.indexOf("HEADING_") === 0) {
+    const headingLevel = parseInt(paragraphStyleName[8]);
+    const headingPrefix = new Array(headingLevel).fill("#").join("") + " ";
+    prefix = headingPrefix;
+  }
+
+  if (md.join("").trim() === "") {
+    // If the paragraph is empty (e.g. consists only of suggestions), then ignore it
+    return "";
+  } else if (paragraphContext.bullet) {
+    const pb = paragraphContext.bullet;
+    const nestingLevel = pb.nestingLevel || 0;
+    const listID = pb.listId;
+    const list = docContext.lists[listID];
+    const currentLevel = list.listProperties.nestingLevels[nestingLevel];
+    if (!currentLevel) {
+      throw new Error(
+        "Level information should be available for all nesting levels. Input json must be incorrect"
+      );
+    }
+
+    // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
+    // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
+    // Anyway, ordered lists specify a "glyphType" while unordered ones specify a "glyphSymbol" so we're using that as a discriminator
+    const isOrdered =
+      currentLevel.hasOwnProperty("glyphType") &&
+      currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
+
+    const getBulletOrder = (paragraph) => {
+      const paragraphId = paragraphIdGenerator(paragraph);
+      const orderNumber = bulletOrderNums.get(paragraphId);
+      if (!orderNumber) {
+        throw new Error(
+          "Order number should be available for all ordered paragraphs"
+        );
+      }
+      return orderNumber;
+    };
+    itemMarker = isOrdered ? getBulletOrder(paragraph) + ". " : "- ";
+    leadingSpace = new Array(nestingLevel).fill("    ").join("");
+    return (
+      leadingSpace +
+      itemMarker +
+      prefix +
+      md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
+    );
+  } else {
+    return (
+      leadingSpace +
+      itemMarker +
+      prefix +
+      md.join("").replaceAll("\n", "\n" + leadingSpace)
+    );
+  }
+};
+
+const generateBulletOrderMap = (paragraphs) => {
   // The order numbers for paragraph bullets are stored to then be used in the actual parsing
   // This is done separately from the parsing because it must be done on the paragraphs in order
   // Once the bullet orders are determined then further parsing could be done out of order
   const bulletOrderNumbers = new Map();
   const listBulletCounters = new Map();
-  allParagraphs.forEach((paragraph) => {
+  paragraphs.forEach((paragraph) => {
     const { elements, ...paragraphContext } = paragraph;
     const { bullet: pb } = paragraphContext;
     if (!pb) return;
@@ -268,75 +337,14 @@ export const parseParagraph = (documentContext, allParagraphs) => {
     }
     bulletOrderNumbers.set(paragraphId, paragraphOrderNum);
   });
+  return bulletOrderNumbers;
+};
 
-  return (paragraph) => {
-    const { elements, ...paragraphContext } = paragraph;
-    const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
-
-    let md = mergeSameElements(elements).map(
-      parseElement({ documentContext, paragraphContext })
-    );
-
-    let prefix = "";
-    let itemMarker = "";
-    let leadingSpace = "";
-
-    // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
-    if (paragraphStyleName.indexOf("HEADING_") === 0) {
-      const headingLevel = parseInt(paragraphStyleName[8]);
-      const headingPrefix = new Array(headingLevel).fill("#").join("") + " ";
-      prefix = headingPrefix;
-    }
-
-    if (md.join("").trim() === "") {
-      // If the paragraph is empty (e.g. consists only of suggestions), then ignore it
-      return "";
-    } else if (paragraphContext.bullet) {
-      const pb = paragraphContext.bullet;
-      const nestingLevel = pb.nestingLevel || 0;
-      const listID = pb.listId;
-      const list = documentContext.lists[listID];
-      const currentLevel = list.listProperties.nestingLevels[nestingLevel];
-      if (!currentLevel) {
-        throw new Error(
-          "Level information should be available for all nesting levels. Input json must be incorrect"
-        );
-      }
-
-      // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
-      // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
-      // Anyway, ordered lists specify a "glyphType" while unordered ones specify a "glyphSymbol" so we're using that as a discriminator
-      const isOrdered =
-        currentLevel.hasOwnProperty("glyphType") &&
-        currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
-
-      const getBulletOrder = (paragraph) => {
-        const paragraphId = paragraphIdGenerator(paragraph);
-        const orderNumber = bulletOrderNumbers.get(paragraphId);
-        if (!orderNumber) {
-          throw new Error(
-            "Order number should be available for all ordered paragraphs"
-          );
-        }
-        return orderNumber;
-      };
-      itemMarker = isOrdered ? getBulletOrder(paragraph) + ". " : "- ";
-      leadingSpace = new Array(nestingLevel).fill("    ").join("");
-      return (
-        leadingSpace +
-        itemMarker +
-        prefix +
-        md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
-      );
-    } else {
-      return (
-        leadingSpace +
-        itemMarker +
-        prefix +
-        md.join("").replaceAll("\n", "\n" + leadingSpace)
-      );
-    }
-  };
+// Using the startIndex of the first element of the paragraph
+// Assuming that each paragraph has at least one element
+const paragraphIdGenerator = (paragraph) => {
+  const firstElement = paragraph.elements[0];
+  return firstElement.startIndex;
 };
 
 const isGrey = (textStyle) => {
@@ -481,7 +489,7 @@ export const tableParser = (context) => {
   const extractRow = ({ tableCells }) =>
     tableCells.map(({ content }) => {
       const paragraphs = extractAllParagraphs(content);
-      const paragraphParser = parseParagraph(context, paragraphs);
+      const paragraphParser = makeParser(context, paragraphs);
       paragraphs.map(paragraphParser).join("\n");
     });
 

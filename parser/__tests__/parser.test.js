@@ -4,7 +4,7 @@ import {
   parseDoc,
   fetchExternalContent,
   getTag,
-  parseParagraph,
+  makeParser,
   parsetextRun,
   parserichLink,
   parseinlineObjectElement,
@@ -308,7 +308,7 @@ describe("parseParagraph", () => {
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
     };
-    const result = parseParagraph(documentContext, [paragraph])(paragraph);
+    const result = makeParser(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("");
   });
 
@@ -325,12 +325,12 @@ describe("parseParagraph", () => {
       ],
       paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
     };
-    const result = parseParagraph(documentContext, [paragraph])(paragraph);
+    const result = makeParser(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("");
   });
 
   it("should return a plain paragraph without any formatting", () => {
-    const result = parseParagraph(documentContext, [paragraph])(paragraph);
+    const result = makeParser(documentContext, [paragraph])(paragraph);
     expect(result).toEqual("Hello, world!");
   });
 
@@ -339,7 +339,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       paragraphStyle: { namedStyleType: "HEADING_1" },
     };
-    const result = parseParagraph(documentContext, [heading])(heading);
+    const result = makeParser(documentContext, [heading])(heading);
     expect(result).toEqual("# Hello, world!");
   });
 
@@ -349,7 +349,7 @@ describe("parseParagraph", () => {
       paragraphStyle: { namedStyleType: "HEADING_1" },
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = parseParagraph(documentContext, [heading])(heading);
+    const result = makeParser(documentContext, [heading])(heading);
     expect(result).toEqual("    - # Hello, world!");
   });
 
@@ -358,7 +358,7 @@ describe("parseParagraph", () => {
       ...paragraph,
       bullet: { nestingLevel: 1, listId: "list-id" },
     };
-    const result = parseParagraph(documentContext, [listItem])(listItem);
+    const result = makeParser(documentContext, [listItem])(listItem);
     expect(result).toEqual("    - Hello, world!");
   });
 
@@ -377,7 +377,7 @@ describe("parseParagraph", () => {
         },
       },
     };
-    const result = parseParagraph(context, [listItem])(listItem);
+    const result = makeParser(context, [listItem])(listItem);
     expect(result).toEqual("1. Hello, world!");
   });
 
@@ -403,7 +403,7 @@ describe("parseParagraph", () => {
         },
       },
     };
-    const parseWithContext = parseParagraph(context, paragraphs);
+    const parseWithContext = makeParser(context, paragraphs);
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);
@@ -434,7 +434,7 @@ describe("parseParagraph", () => {
         "list-id-1": decimalList,
       },
     };
-    const parseWithContext = parseParagraph(context, paragraphs);
+    const parseWithContext = makeParser(context, paragraphs);
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);
@@ -466,7 +466,7 @@ describe("parseParagraph", () => {
         },
       },
     };
-    const parseWithContext = parseParagraph(context, paragraphs);
+    const parseWithContext = makeParser(context, paragraphs);
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);
