@@ -248,19 +248,22 @@ export const parseParagraph = (documentContext, allParagraphs) => {
   // This is done separately from the parsing because it must be done on the paragraphs in order
   // Once the bullet orders are determined then further parsing could be done out of order
   const bulletOrderNumbers = new Map();
-  const listBulletCounter = new Map();
+  const listBulletCounters = new Map();
   allParagraphs.forEach((paragraph) => {
     const { elements, ...paragraphContext } = paragraph;
     if (paragraphContext.bullet) {
       const pb = paragraphContext.bullet;
-      // TODO: Check if nesting needs to be considered
-      // const nestingLevel = pb.nestingLevel || 0;
       const listId = pb.listId;
-      if (!listBulletCounter.has(listId)) {
-        listBulletCounter.set(listId, 0);
+      if (!listBulletCounters.has(listId)) {
+        listBulletCounters.set(listId, new Map());
       }
-      const paragraphOrderNum = listBulletCounter.get(listId) + 1;
-      listBulletCounter.set(listId, paragraphOrderNum);
+      const listCounter = listBulletCounters.get(listId);
+      const nestingLevel = pb.nestingLevel || 0;
+      if (!listCounter.has(nestingLevel)) {
+        listCounter.set(nestingLevel, 0);
+      }
+      const paragraphOrderNum = listCounter.get(nestingLevel) + 1;
+      listCounter.set(nestingLevel, paragraphOrderNum);
       const paragraphId = paragraphIdGenerator(paragraph);
       if (bulletOrderNumbers.has(paragraphId)) {
         throw new Error("ParagraphId should be unique for each paragraph");
