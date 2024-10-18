@@ -86,6 +86,9 @@ const extractDocParts = (doc) => {
 };
 
 export const parseDoc = async (doc, answer) => {
+  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
+    extractDocParts(doc);
+
   // contextual information about the doc that is sometimes useful
   // to the parsers of particular elements
   const documentContext = {
@@ -94,10 +97,8 @@ export const parseDoc = async (doc, answer) => {
     inlineObjects: doc.inlineObjects,
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
+    getBulletOrderNumber: makeBulletOrderMap(paragraphs),
   };
-  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
-    extractDocParts(doc);
-
   // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
@@ -105,7 +106,6 @@ export const parseDoc = async (doc, answer) => {
   }
 
   const body = paragraphs.map(parseParagraph(documentContext)).join("\n\n");
-
   const footnotes = extractFootnotes(documentContext, doc);
 
   const md = body + "\n\n" + footnotes;
@@ -265,6 +265,11 @@ export const parseParagraph = (documentContext) => (paragraph) => {
     const listID = pb.listId;
     const list = documentContext.lists[listID];
     const currentLevel = list.listProperties.nestingLevels[nestingLevel];
+    if (!currentLevel) {
+      throw new Error(
+        "Level information should be available for all nesting levels. Input json must be incorrect"
+      );
+    }
 
     // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
     // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
@@ -273,12 +278,17 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       currentLevel.hasOwnProperty("glyphType") &&
       currentLevel.glyphType !== "GLYPH_TYPE_UNSPECIFIED";
 
-    // Please forgive me for always using 1. as the sequence number on list items
-    // It's sorta hard to count them properly so I'm depending on markdown renderers doing the heavy lifting for me.
-    // Which, in fairness, they're supposed to.
-    itemMarker = isOrdered ? "1. " : "- ";
+    const getBulletOrder = (paragraph) => {
+      const orderNumber = documentContext.getBulletOrderNumber(paragraph);
+      if (!orderNumber) {
+        throw new Error(
+          "Order number should be available for all ordered paragraphs"
+        );
+      }
+      return orderNumber;
+    };
+    itemMarker = isOrdered ? getBulletOrder(paragraph) + ". " : "- ";
     leadingSpace = new Array(nestingLevel).fill("    ").join("");
-
     return (
       leadingSpace +
       itemMarker +
@@ -293,6 +303,49 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       md.join("").replaceAll("\n", "\n" + leadingSpace)
     );
   }
+};
+
+/**
+ * The order numbers for paragraph bullets are stored to then be used in the actual parsing.
+ * This is done separately from the parsing because it must be done on the paragraphs in order.
+ * Once the bullet orders are determined then further parsing could be done out of order.
+ * @param {*} paragraphs an array of paragraphs where the list items are in the desired order
+ * @returns order number getter function
+ */
+export const makeBulletOrderMap = (paragraphs) => {
+  // Using the startIndex of the first element of the paragraph
+  // Assuming that each paragraph has at least one element
+  const getParagraphId = (paragraph) => {
+    const firstElement = paragraph.elements[0];
+    return firstElement.startIndex;
+  };
+
+  const bulletOrderNumbers = new Map();
+  const listBulletCounters = new Map();
+  paragraphs.forEach((paragraph) => {
+    const { elements, ...paragraphContext } = paragraph;
+    const { bullet: pb } = paragraphContext;
+    if (!pb) return;
+
+    const listCounter = listBulletCounters.get(pb.listId) || new Map();
+    listBulletCounters.set(pb.listId, listCounter);
+
+    // Each nesting level should have separate count
+    const nestingLevel = pb.nestingLevel || 0;
+    const paragraphOrderNum = (listCounter.get(nestingLevel) || 0) + 1;
+    listCounter.set(nestingLevel, paragraphOrderNum);
+
+    const paragraphId = getParagraphId(paragraph);
+    if (bulletOrderNumbers.has(paragraphId)) {
+      throw new Error("ParagraphId should be unique for each paragraph");
+    }
+    bulletOrderNumbers.set(paragraphId, paragraphOrderNum);
+  });
+
+  return (paragraph) => {
+    const paragraphId = getParagraphId(paragraph);
+    return bulletOrderNumbers.get(paragraphId);
+  };
 };
 
 const isGrey = (textStyle) => {
