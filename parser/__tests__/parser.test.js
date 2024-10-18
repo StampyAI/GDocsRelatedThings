@@ -408,6 +408,41 @@ describe("parseParagraph", () => {
     const result2 = parseParagraph(context, paragraphs)(paragraphs[1]);
     expect(result2).toEqual("2. Hello, world!");
   });
+
+  it("should parse a list with a nested item", () => {
+    const paragraphCount = 2;
+    const paragraphs = [];
+    for (let i = 0; i < paragraphCount; i++) {
+      const runCount = 2;
+      const paragraph = getParagraph(i * runCount + 1, runCount);
+      const listItem = {
+        ...paragraph,
+        bullet: { listId: "list-id" },
+      };
+      if (i >= 1) {
+        listItem.bullet.nestingLevel = i
+      }
+      paragraphs.push(listItem);
+    }
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [
+              { glyphType: "DECIMAL" },
+              { glyphType: "DECIMAL" }
+            ],
+          },
+        },
+      },
+    };
+    const result1 = parseParagraph(context, paragraphs)(paragraphs[0]);
+    expect(result1).toEqual("1. Hello, world!");
+    const result2 = parseParagraph(context, paragraphs)(paragraphs[1]);
+    const nestingSpacer = "    "; 
+    expect(result2).toEqual(nestingSpacer + "1. Hello, world!");
+  });
 });
 
 describe("parseDoc", () => {

@@ -297,6 +297,11 @@ export const parseParagraph = (documentContext, allParagraphs) => {
       const listID = pb.listId;
       const list = documentContext.lists[listID];
       const currentLevel = list.listProperties.nestingLevels[nestingLevel];
+      if (!currentLevel) {
+        throw new Error(
+          "Level information should be available for all nesting levels. Input json must be incorrect"
+        );
+      }
 
       // This check is ugly as sin, but necessary because GDocs doesn't actually clearly say "this is an [un]ordered list" anywhere
       // I think this is because internally, all lists are ordered and it just only sometimes uses glyphs which represent that
