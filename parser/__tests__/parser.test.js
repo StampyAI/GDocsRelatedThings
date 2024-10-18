@@ -409,6 +409,37 @@ describe("parseParagraph", () => {
     const result2 = parseWithContext(paragraphs[1]);
     expect(result2).toEqual("2. Hello, world!");
   });
+  
+  it("should parse multiple lists", () => {
+    const paragraphCount = 2;
+    const paragraphs = [];
+    for (let i = 0; i < paragraphCount; i++) {
+      const runCount = 2;
+      const paragraph = getParagraph(i * runCount + 1, runCount);
+      const listItem = {
+        ...paragraph,
+        bullet: { listId: "list-id-" + i },
+      };
+      paragraphs.push(listItem);
+    }
+    const decimalList = {
+      listProperties: {
+        nestingLevels: [{ glyphType: "DECIMAL" }],
+      },
+    };
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id-0": decimalList,
+        "list-id-1": decimalList,
+      },
+    };
+    const parseWithContext = parseParagraph(context, paragraphs);
+    const result1 = parseWithContext(paragraphs[0]);
+    expect(result1).toEqual("1. Hello, world!");
+    const result2 = parseWithContext(paragraphs[1]);
+    expect(result2).toEqual("1. Hello, world!");
+  });
 
   it("should parse a list with a nested item", () => {
     const paragraphCount = 2;
