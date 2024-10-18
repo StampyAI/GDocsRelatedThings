@@ -403,9 +403,10 @@ describe("parseParagraph", () => {
         },
       },
     };
-    const result1 = parseParagraph(context, paragraphs)(paragraphs[0]);
+    const parseWithContext = parseParagraph(context, paragraphs);
+    const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
-    const result2 = parseParagraph(context, paragraphs)(paragraphs[1]);
+    const result2 = parseWithContext(paragraphs[1]);
     expect(result2).toEqual("2. Hello, world!");
   });
 
@@ -437,9 +438,10 @@ describe("parseParagraph", () => {
         },
       },
     };
-    const result1 = parseParagraph(context, paragraphs)(paragraphs[0]);
+    const parseWithContext = parseParagraph(context, paragraphs);
+    const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
-    const result2 = parseParagraph(context, paragraphs)(paragraphs[1]);
+    const result2 = parseWithContext(paragraphs[1]);
     const nestingSpacer = "    "; 
     expect(result2).toEqual(nestingSpacer + "1. Hello, world!");
   });
