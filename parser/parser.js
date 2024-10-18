@@ -305,6 +305,13 @@ export const parseParagraph = (documentContext) => (paragraph) => {
   }
 };
 
+/**
+ * The order numbers for paragraph bullets are stored to then be used in the actual parsing.
+ * This is done separately from the parsing because it must be done on the paragraphs in order.
+ * Once the bullet orders are determined then further parsing could be done out of order.
+ * @param {*} paragraphs an array of paragraphs where the list items are in the desired order
+ * @returns order number getter function
+ */
 export const makeBulletOrderMap = (paragraphs) => {
   // Using the startIndex of the first element of the paragraph
   // Assuming that each paragraph has at least one element
@@ -313,9 +320,6 @@ export const makeBulletOrderMap = (paragraphs) => {
     return firstElement.startIndex;
   };
 
-  // The order numbers for paragraph bullets are stored to then be used in the actual parsing
-  // This is done separately from the parsing because it must be done on the paragraphs in order
-  // Once the bullet orders are determined then further parsing could be done out of order
   const bulletOrderNumbers = new Map();
   const listBulletCounters = new Map();
   paragraphs.forEach((paragraph) => {
