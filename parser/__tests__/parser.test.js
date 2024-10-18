@@ -409,7 +409,7 @@ describe("parseParagraph", () => {
     const result2 = parseWithContext(paragraphs[1]);
     expect(result2).toEqual("2. Hello, world!");
   });
-  
+
   it("should parse multiple lists", () => {
     const paragraphCount = 2;
     const paragraphs = [];
@@ -452,7 +452,7 @@ describe("parseParagraph", () => {
         bullet: { listId: "list-id" },
       };
       if (i >= 1) {
-        listItem.bullet.nestingLevel = i
+        listItem.bullet.nestingLevel = i;
       }
       paragraphs.push(listItem);
     }
@@ -461,10 +461,7 @@ describe("parseParagraph", () => {
       lists: {
         "list-id": {
           listProperties: {
-            nestingLevels: [
-              { glyphType: "DECIMAL" },
-              { glyphType: "DECIMAL" }
-            ],
+            nestingLevels: [{ glyphType: "DECIMAL" }, { glyphType: "DECIMAL" }],
           },
         },
       },
@@ -473,7 +470,7 @@ describe("parseParagraph", () => {
     const result1 = parseWithContext(paragraphs[0]);
     expect(result1).toEqual("1. Hello, world!");
     const result2 = parseWithContext(paragraphs[1]);
-    const nestingSpacer = "    "; 
+    const nestingSpacer = "    ";
     expect(result2).toEqual(nestingSpacer + "1. Hello, world!");
   });
 });

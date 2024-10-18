@@ -253,15 +253,15 @@ export const parseParagraph = (documentContext, allParagraphs) => {
     const { elements, ...paragraphContext } = paragraph;
     const { bullet: pb } = paragraphContext;
     if (!pb) return;
-  
+
     const listCounter = listBulletCounters.get(pb.listId) || new Map();
     listBulletCounters.set(pb.listId, listCounter);
-  
+
     // Each nesting level should have separate count
     const nestingLevel = pb.nestingLevel || 0;
     const paragraphOrderNum = (listCounter.get(nestingLevel) || 0) + 1;
     listCounter.set(nestingLevel, paragraphOrderNum);
-  
+
     const paragraphId = paragraphIdGenerator(paragraph);
     if (bulletOrderNumbers.has(paragraphId)) {
       throw new Error("ParagraphId should be unique for each paragraph");
