@@ -64,3 +64,6 @@ It has document id `10g6U9SL0CBy__wCBTib7_WhB3S3aaFt7Fx1vVgCzg2I`.
 
 ## Fetch and Parse a Single Document
 The `devtool.js` script can be run using node.js to either fetch the JSON or the parsed markdown for a google doc. See the script for parameter details.
+
+## Git diff changes
+The `dev-output-diff.sh` bash script can be run to do a git diff of document to visualize how changes in a feature branch will affect the parsed markdown.
