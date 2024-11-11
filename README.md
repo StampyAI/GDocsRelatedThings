@@ -55,3 +55,12 @@ These are totally optional. If not provided, any logging to Discord will be skip
 # Running
 
 `node bin/importContent.js`
+
+# Dev Testing Scripts
+
+For the below, a useful google doc for testing is the
+[Example with all the formatting](https://docs.google.com/document/d/10g6U9SL0CBy__wCBTib7_WhB3S3aaFt7Fx1vVgCzg2I/edit?tab=t.0).
+It has document id `10g6U9SL0CBy__wCBTib7_WhB3S3aaFt7Fx1vVgCzg2I`.
+
+## Fetch and Parse a Single Document
+The `devtool.js` script can be run using node.js to either fetch the JSON or the parsed markdown for a google doc. See the script for parameter details.
