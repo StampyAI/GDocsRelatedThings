@@ -239,7 +239,12 @@ export const mergeSameElements = (elements) =>
 
 export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
-  const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
+  const paragraphStyle = paragraphContext.paragraphStyle || {};
+  const paragraphStyleName = paragraphStyle.namedStyleType;
+
+// Check indentation - Google Docs API provides this in PT units
+const indentStart = paragraphStyle.indentStart?.magnitude || 0;
+const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt
 
   let md = mergeSameElements(elements).map(
     parseElement({ documentContext, paragraphContext })
@@ -250,7 +255,7 @@ export const parseParagraph = (documentContext) => (paragraph) => {
   let leadingSpace = "";
 
   // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
-  if (paragraphStyleName.indexOf("HEADING_") === 0) {
+  if (paragraphStyleName?.indexOf("HEADING_") === 0) {
     const headingLevel = parseInt(paragraphStyleName[8]);
     const headingPrefix = new Array(headingLevel).fill("#").join("") + " ";
     prefix = headingPrefix;
@@ -296,11 +301,15 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
     );
   } else {
+    // Add quote marker if the paragraph is indented beyond our threshold
+    const isQuote = indentStart >= QUOTE_INDENT_THRESHOLD;
+    const quotePrefix = isQuote ? "> " : "";
     return (
       leadingSpace +
       itemMarker +
+      quotePrefix +
       prefix +
-      md.join("").replaceAll("\n", "\n" + leadingSpace)
+      md.join("").replaceAll("\n", "\n" + leadingSpace + quotePrefix)
     );
   }
 };
