@@ -16,6 +16,7 @@ git checkout main
 main_output=$(node devtools.js md $google_doc_id)
 main_output_file=$(mktemp)
 echo "$main_output" > "$main_output_file"
+echo "Branch 'main' outputs $main_output_file"
 
 # 6. Check out the feature branch
 git checkout $feature_branch
@@ -24,12 +25,10 @@ git checkout $feature_branch
 branch_output=$(node devtools.js md $google_doc_id)
 branch_output_file=$(mktemp)
 echo "$branch_output" > "$branch_output_file"
+echo "Branch $feature_branch outputs $main_output_file"
 
 # 8. Output a git diff of the two command runs
 git diff "$main_output_file" "$branch_output_file"
 
-# 9. Clean up temporary files
-rm "$main_output_file" "$branch_output_file"
-
-# 10. Return to initial branch
+# 9. Return to initial branch
 git checkout $current_branch
