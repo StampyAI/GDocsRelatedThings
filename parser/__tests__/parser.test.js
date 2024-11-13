@@ -476,6 +476,59 @@ describe("parseParagraph", () => {
     const nestingSpacer = "    ";
     expect(result2).toEqual(nestingSpacer + "1. Hello, world!");
   });
+  
+  it("should format indented text as block quotes", () => {
+    const indentedParagraph = {
+      elements: [{ textRun: { content: "This is an indented quote" } }],
+      paragraphStyle: { 
+        namedStyleType: "NORMAL_TEXT",
+        indentStart: { magnitude: 36 } // Standard indentation button level
+      }
+    };
+    const result = parseParagraph(documentContext)(indentedParagraph);
+    expect(result).toEqual("> This is an indented quote");
+  });
+
+  it("should not format text with small indentation as block quotes", () => {
+    const slightlyIndentedParagraph = {
+      elements: [{ textRun: { content: "This has small indentation" } }],
+      paragraphStyle: { 
+        namedStyleType: "NORMAL_TEXT",
+        indentStart: { magnitude: 10 } // Below our threshold of 18
+      }
+    };
+    const result = parseParagraph(documentContext)(slightlyIndentedParagraph);
+    expect(result).toEqual("This has small indentation");
+  });
+
+  it("should handle multiline block quotes", () => {
+    const multilineParagraph = {
+      elements: [{ textRun: { content: "First line\nSecond line\nThird line" } }],
+      paragraphStyle: { 
+        namedStyleType: "NORMAL_TEXT",
+        indentStart: { magnitude: 36 }
+      }
+    };
+    const result = parseParagraph(documentContext)(multilineParagraph);
+    expect(result).toEqual("> First line\n> Second line\n> Third line");
+  });
+
+  it("should handle block quotes with other formatting", () => {
+    const formattedParagraph = {
+      elements: [{ 
+        textRun: { 
+          content: "Bold quote",
+          textStyle: { bold: true }
+        } 
+      }],
+      paragraphStyle: { 
+        namedStyleType: "NORMAL_TEXT",
+        indentStart: { magnitude: 36 }
+      }
+    };
+    const result = parseParagraph(documentContext)(formattedParagraph);
+    expect(result).toEqual("> **Bold quote**");
+  });
 });
 
 describe("parseDoc", () => {
