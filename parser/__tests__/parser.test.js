@@ -12,6 +12,7 @@ import {
   parsefootnoteReference,
   parseElement,
   mergeSameElements,
+  makeBulletOrderMap,
 } from "../parser.js";
 
 fetchMock.enableMocks();
@@ -269,6 +270,23 @@ describe("parseElement", () => {
 });
 
 describe("parseParagraph", () => {
+  const getParagraph = (startIndex, runCount) => {
+    const elements = [];
+    for (let i = 0; i < runCount; i++) {
+      elements.push({
+        startIndex: startIndex + i,
+        textRun: {
+          content: i % 2 == 0 ? "Hello, " : "world!",
+        },
+      });
+    }
+    return {
+      elements,
+      paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
+    };
+  };
+  const paragraph = getParagraph(1, 2);
+
   const documentContext = {
     lists: {
       "list-id": {
@@ -281,14 +299,6 @@ describe("parseParagraph", () => {
         },
       },
     },
-  };
-
-  const paragraph = {
-    elements: [
-      { textRun: { content: "Hello, " } },
-      { textRun: { content: "world!" } },
-    ],
-    paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
   };
 
   it("should handle empty paragraphs", () => {
@@ -354,12 +364,117 @@ describe("parseParagraph", () => {
   it("should return an ordered list item", () => {
     const listItem = {
       ...paragraph,
-      bullet: { nestingLevel: 1, listId: "list-id" },
+      bullet: { listId: "list-id" },
     };
-    documentContext.lists["list-id"].listProperties.nestingLevels[1].glyphType =
-      "DECIMAL";
-    const result = parseParagraph(documentContext)(listItem);
-    expect(result).toEqual("    1. Hello, world!");
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [{ glyphType: "DECIMAL" }],
+          },
+        },
+      },
+      getBulletOrderNumber: makeBulletOrderMap([listItem]),
+    };
+    const result = parseParagraph(context)(listItem);
+    expect(result).toEqual("1. Hello, world!");
+  });
+
+  it("should parse a list with several items", () => {
+    const paragraphCount = 2;
+    const paragraphs = [];
+    for (let i = 0; i < paragraphCount; i++) {
+      const runCount = 2;
+      const paragraph = getParagraph(i * runCount + 1, runCount);
+      const listItem = {
+        ...paragraph,
+        bullet: { listId: "list-id" },
+      };
+      paragraphs.push(listItem);
+    }
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [{ glyphType: "DECIMAL" }],
+          },
+        },
+      },
+      getBulletOrderNumber: makeBulletOrderMap(paragraphs),
+    };
+    const parseWithContext = parseParagraph(context, paragraphs);
+    const result1 = parseWithContext(paragraphs[0]);
+    expect(result1).toEqual("1. Hello, world!");
+    const result2 = parseWithContext(paragraphs[1]);
+    expect(result2).toEqual("2. Hello, world!");
+  });
+
+  it("should parse multiple lists", () => {
+    const paragraphCount = 2;
+    const paragraphs = [];
+    for (let i = 0; i < paragraphCount; i++) {
+      const runCount = 2;
+      const paragraph = getParagraph(i * runCount + 1, runCount);
+      const listItem = {
+        ...paragraph,
+        bullet: { listId: "list-id-" + i },
+      };
+      paragraphs.push(listItem);
+    }
+    const decimalList = {
+      listProperties: {
+        nestingLevels: [{ glyphType: "DECIMAL" }],
+      },
+    };
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id-0": decimalList,
+        "list-id-1": decimalList,
+      },
+      getBulletOrderNumber: makeBulletOrderMap(paragraphs),
+    };
+    const parseWithContext = parseParagraph(context, paragraphs);
+    const result1 = parseWithContext(paragraphs[0]);
+    expect(result1).toEqual("1. Hello, world!");
+    const result2 = parseWithContext(paragraphs[1]);
+    expect(result2).toEqual("1. Hello, world!");
+  });
+
+  it("should parse a list with a nested item", () => {
+    const paragraphCount = 2;
+    const paragraphs = [];
+    for (let i = 0; i < paragraphCount; i++) {
+      const runCount = 2;
+      const paragraph = getParagraph(i * runCount + 1, runCount);
+      const listItem = {
+        ...paragraph,
+        bullet: { listId: "list-id" },
+      };
+      if (i >= 1) {
+        listItem.bullet.nestingLevel = i;
+      }
+      paragraphs.push(listItem);
+    }
+    const context = {
+      ...documentContext,
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [{ glyphType: "DECIMAL" }, { glyphType: "DECIMAL" }],
+          },
+        },
+      },
+      getBulletOrderNumber: makeBulletOrderMap(paragraphs),
+    };
+    const parseWithContext = parseParagraph(context, paragraphs);
+    const result1 = parseWithContext(paragraphs[0]);
+    expect(result1).toEqual("1. Hello, world!");
+    const result2 = parseWithContext(paragraphs[1]);
+    const nestingSpacer = "    ";
+    expect(result2).toEqual(nestingSpacer + "1. Hello, world!");
   });
 });
 
