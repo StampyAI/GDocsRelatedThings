@@ -242,9 +242,9 @@ export const parseParagraph = (documentContext) => (paragraph) => {
   const paragraphStyle = paragraphContext.paragraphStyle || {};
   const paragraphStyleName = paragraphStyle.namedStyleType;
 
-// Check indentation - Google Docs API provides this in PT units
-const indentStart = paragraphStyle.indentStart?.magnitude || 0;
-const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt
+  // Check indentation - Google Docs API provides this in PT units
+  const indentStart = paragraphStyle.indentStart?.magnitude || 0;
+  const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt, we test lower
 
   let md = mergeSameElements(elements).map(
     parseElement({ documentContext, paragraphContext })
