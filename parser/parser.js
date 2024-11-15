@@ -303,7 +303,7 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
     );
   } else {
-    let quotePrefix = ""
+    let quotePrefix = "";
     if (isQuote(paragraphStyle)) {
       quotePrefix = "> ";
     }
