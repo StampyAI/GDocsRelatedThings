@@ -237,9 +237,16 @@ export const mergeSameElements = (elements) =>
     return acc;
   }, []);
 
+const isQuote = (paragraphStyle) => {
+  const indentStart = paragraphStyle?.indentStart?.magnitude || 0;
+  const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt, we test lower
+  return indentStart >= QUOTE_INDENT_THRESHOLD;
+};
+
 export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
-  const paragraphStyleName = paragraphContext.paragraphStyle?.namedStyleType;
+  const paragraphStyle = paragraphContext.paragraphStyle || {};
+  const paragraphStyleName = paragraphStyle.namedStyleType;
 
   let md = mergeSameElements(elements).map(
     parseElement({ documentContext, paragraphContext })
@@ -250,7 +257,7 @@ export const parseParagraph = (documentContext) => (paragraph) => {
   let leadingSpace = "";
 
   // First we check if the "paragraph" is a heading, because the markdown for a heading is the first thing we need to output
-  if (paragraphStyleName.indexOf("HEADING_") === 0) {
+  if (paragraphStyleName?.indexOf("HEADING_") === 0) {
     const headingLevel = parseInt(paragraphStyleName[8]);
     const headingPrefix = new Array(headingLevel).fill("#").join("") + " ";
     prefix = headingPrefix;
@@ -296,11 +303,16 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
     );
   } else {
+    let quotePrefix = "";
+    if (isQuote(paragraphStyle)) {
+      quotePrefix = "> ";
+    }
     return (
       leadingSpace +
       itemMarker +
+      quotePrefix +
       prefix +
-      md.join("").replaceAll("\n", "\n" + leadingSpace)
+      md.join("").replaceAll("\n", "\n" + leadingSpace + quotePrefix)
     );
   }
 };
