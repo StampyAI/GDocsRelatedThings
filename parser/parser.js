@@ -237,14 +237,16 @@ export const mergeSameElements = (elements) =>
     return acc;
   }, []);
 
+const isQuote = (paragraphStyle) => {
+  const indentStart = paragraphStyle?.indentStart?.magnitude || 0;
+  const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt, we test lower
+  return indentStart >= QUOTE_INDENT_THRESHOLD;
+};
+
 export const parseParagraph = (documentContext) => (paragraph) => {
   const { elements, ...paragraphContext } = paragraph;
   const paragraphStyle = paragraphContext.paragraphStyle || {};
   const paragraphStyleName = paragraphStyle.namedStyleType;
-
-  // Check indentation - Google Docs API provides this in PT units
-  const indentStart = paragraphStyle.indentStart?.magnitude || 0;
-  const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt, we test lower
 
   let md = mergeSameElements(elements).map(
     parseElement({ documentContext, paragraphContext })
@@ -300,8 +302,11 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       prefix +
       md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
     );
-  } else if (isQuote) {
-    const quotePrefix = "> ";
+  } else {
+    let quotePrefix = ""
+    if (isQuote(paragraphStyle)) {
+      quotePrefix = "> ";
+    }
     return (
       leadingSpace +
       itemMarker +
