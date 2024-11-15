@@ -300,10 +300,8 @@ export const parseParagraph = (documentContext) => (paragraph) => {
       prefix +
       md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
     );
-  } else {
-    // Add quote marker if the paragraph is indented beyond our threshold
-    const isQuote = indentStart >= QUOTE_INDENT_THRESHOLD;
-    const quotePrefix = isQuote ? "> " : "";
+  } else if (isQuote) {
+    const quotePrefix = "> ";
     return (
       leadingSpace +
       itemMarker +
