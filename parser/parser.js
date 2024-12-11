@@ -103,10 +103,10 @@ export const parseDoc = async (doc, answer) => {
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
     const attributionMessage = `<i>This text was automatically imported from a tag on ${tagContent.sourceName}</i>\n\n`;
-    return { 
-      md: attributionMessage + tagContent.content, 
-      relatedAnswerDocIDs, 
-      alternativePhrasings 
+    return {
+      md: attributionMessage + tagContent.content,
+      relatedAnswerDocIDs,
+      alternativePhrasings,
     };
   }
 
@@ -169,10 +169,13 @@ export const fetchExternalContent = async (paragraphs) => {
       const content = await handler(match.groups.tagName);
       return {
         content,
-        sourceName: text.includes('lesswrong.com') ? 'LessWrong' :
-                    text.includes('effectivealtruism.org') ? 'the EA Forum' :
-                    text.includes('alignmentforum.org') ? 'the Alignment Forum' :
-                    'an external source'
+        sourceName: text.includes("lesswrong.com")
+          ? "LessWrong"
+          : text.includes("effectivealtruism.org")
+          ? "the EA Forum"
+          : text.includes("alignmentforum.org")
+          ? "the Alignment Forum"
+          : "an external source",
       };
     }
   }
