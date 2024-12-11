@@ -752,7 +752,7 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      "<i>This text was automatically imported from a tag on LessWrong</i>\n\nThis is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -769,7 +769,7 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      "<i>This text was automatically imported from a tag on the EA Forum</i>\n\nThis is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -789,7 +789,7 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      "<i>This text was automatically imported from a tag on LessWrong</i>\n\nThis is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -865,7 +865,7 @@ describe("fetchExternalContent", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
     expect(result).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "LessWrong"}
     );
   });
 
@@ -878,7 +878,7 @@ describe("fetchExternalContent", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
     expect(result).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "the EA Forum"}
     );
   });
 
@@ -901,7 +901,7 @@ describe("fetchExternalContent", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
     expect(result).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "LessWrong"}
     );
   });
 
@@ -936,7 +936,7 @@ describe("fetchExternalContent", () => {
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
     expect(result).toEqual(
-      "This is an example LW tag content (see mockResponse)"
+      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "LessWrong"}
     );
   });
 });
