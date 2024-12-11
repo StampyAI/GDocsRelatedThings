@@ -864,9 +864,10 @@ describe("fetchExternalContent", () => {
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual(
-      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "LessWrong"}
-    );
+    expect(result).toEqual({
+      content: "This is an example LW tag content (see mockResponse)",
+      sourceName: "LessWrong",
+    });
   });
 
   it("calls getEAFTag for EAF tags", async () => {
@@ -877,9 +878,10 @@ describe("fetchExternalContent", () => {
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual(
-      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "the EA Forum"}
-    );
+    expect(result).toEqual({
+      content: "This is an example LW tag content (see mockResponse)",
+      sourceName: "the EA Forum",
+    });
   });
 
   it("returns null for unknown tag URLs", async () => {
@@ -900,9 +902,10 @@ describe("fetchExternalContent", () => {
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual(
-      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "LessWrong"}
-    );
+    expect(result).toEqual({
+      content: "This is an example LW tag content (see mockResponse)",
+      sourceName: "LessWrong",
+    });
   });
 
   it("ignores comments and suggested edits", async () => {
@@ -935,9 +938,10 @@ describe("fetchExternalContent", () => {
     ];
     fetchMock.mockResponse(JSON.stringify(mockResponse));
     const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual(
-      {"content": "This is an example LW tag content (see mockResponse)", "sourceName": "LessWrong"}
-    );
+    expect(result).toEqual({
+      content: "This is an example LW tag content (see mockResponse)",
+      sourceName: "LessWrong",
+    });
   });
 });
 
