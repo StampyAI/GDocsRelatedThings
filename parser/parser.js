@@ -152,31 +152,28 @@ export const fetchExternalContent = async (paragraphs) => {
   const text = texts[0];
 
   const tagHandlers = [
-    [/https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/, getLWTag],
+    [
+      /https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/,
+      getLWTag,
+      "LessWrong",
+    ],
     [
       /https:\/\/forum.effectivealtruism.org\/topics\/(?<tagName>[A-z0-9_-]+)/,
       getEAFTag,
+      "the EA Forum",
     ],
     [
       /https:\/\/(www.)?alignmentforum.org\/tag\/(?<tagName>[A-z0-9_-]+)/,
       getAFTag,
+      "the Alignment Forum",
     ],
   ];
 
-  for (const [regex, handler] of tagHandlers) {
+  for (const [regex, handler, sourceName] of tagHandlers) {
     const match = text.match(regex);
     if (match) {
       const content = await handler(match.groups.tagName);
-      return {
-        content,
-        sourceName: text.includes("lesswrong.com")
-          ? "LessWrong"
-          : text.includes("effectivealtruism.org")
-          ? "the EA Forum"
-          : text.includes("alignmentforum.org")
-          ? "the Alignment Forum"
-          : "an external source",
-      };
+      return { content, sourceName };
     }
   }
   return null;
