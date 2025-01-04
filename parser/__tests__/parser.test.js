@@ -752,8 +752,8 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      '<i>This text was automatically imported from [a tag on LessWrong](https://www.lesswrong.com/tag/some-tag)</i>\n\n' +
-      'This is an example LW tag content (see mockResponse)'
+      "<i>This text was automatically imported from [a tag on LessWrong](https://www.lesswrong.com/tag/some-tag)</i>\n\n" +
+        "This is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -770,8 +770,8 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      '<i>This text was automatically imported from [a tag on the EA Forum](https://forum.effectivealtruism.org/topics/some-tag)</i>\n\n' +
-      'This is an example LW tag content (see mockResponse)'
+      "<i>This text was automatically imported from [a tag on the EA Forum](https://forum.effectivealtruism.org/topics/some-tag)</i>\n\n" +
+        "This is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -859,7 +859,7 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
       sourceName: "LessWrong",
-      sourceUrl: "https://www.lesswrong.com/tag/some-tag"
+      sourceUrl: "https://www.lesswrong.com/tag/some-tag",
     });
   });
 
@@ -896,7 +896,7 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
       sourceName: "LessWrong",
-      sourceUrl: "https://www.lesswrong.com/tag/some-tag"
+      sourceUrl: "https://www.lesswrong.com/tag/some-tag",
     });
   });
 });
