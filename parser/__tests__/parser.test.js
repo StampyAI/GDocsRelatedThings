@@ -752,7 +752,8 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "<i>This text was automatically imported from a tag on LessWrong</i>\n\nThis is an example LW tag content (see mockResponse)"
+      "<i>This text was automatically imported from [a tag on LessWrong](https://www.lesswrong.com/tag/some-tag)</i>\n\n" +
+        "This is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -769,27 +770,8 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "<i>This text was automatically imported from a tag on the EA Forum</i>\n\nThis is an example LW tag content (see mockResponse)"
-    );
-    expect(result.relatedAnswerDocIDs).toEqual([]);
-  });
-
-  it("parses a document with a LessWrong tag if the link is anywhere in the first paragraph", async () => {
-    const doc = {
-      body: {
-        content: [
-          makeText(
-            "Bla bla bla, check https://www.lesswrong.com/tag/some-tag for more info"
-          ),
-        ],
-      },
-    };
-
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
-    const result = await parseDoc(doc);
-
-    expect(result.md).toEqual(
-      "<i>This text was automatically imported from a tag on LessWrong</i>\n\nThis is an example LW tag content (see mockResponse)"
+      "<i>This text was automatically imported from [a tag on the EA Forum](https://forum.effectivealtruism.org/topics/some-tag)</i>\n\n" +
+        "This is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -856,34 +838,6 @@ describe("fetchExternalContent", () => {
     expect(result).toBeNull();
   });
 
-  it("calls getLWTag for lesswrong.com tags", async () => {
-    const paragraphs = [
-      makeText(
-        "Can be found at https://www.lesswrong.com/tag/some-tag. This should suffice to extract the link"
-      ).paragraph,
-    ];
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
-    const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual({
-      content: "This is an example LW tag content (see mockResponse)",
-      sourceName: "LessWrong",
-    });
-  });
-
-  it("calls getEAFTag for EAF tags", async () => {
-    const paragraphs = [
-      makeText(
-        "Check out this post on https://forum.effectivealtruism.org/topics/ea-fund"
-      ).paragraph,
-    ];
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
-    const result = await fetchExternalContent(paragraphs);
-    expect(result).toEqual({
-      content: "This is an example LW tag content (see mockResponse)",
-      sourceName: "the EA Forum",
-    });
-  });
-
   it("returns null for unknown tag URLs", async () => {
     const paragraphs = [
       makeText("Read up about this at https://bla.bla.com").paragraph,
@@ -905,6 +859,7 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
       sourceName: "LessWrong",
+      sourceUrl: "https://www.lesswrong.com/tag/some-tag",
     });
   });
 
@@ -941,6 +896,7 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
       sourceName: "LessWrong",
+      sourceUrl: "https://www.lesswrong.com/tag/some-tag",
     });
   });
 });
