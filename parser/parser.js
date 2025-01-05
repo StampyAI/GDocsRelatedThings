@@ -102,7 +102,7 @@ export const parseDoc = async (doc, answer) => {
   // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
   if (tagContent) {
-    const attributionMessage = `<i>This text was automatically imported from [a tag on ${tagContent.sourceName}](${tagContent.sourceUrl})</i>\n\n`;
+    const attributionMessage = `<i>This text was automatically imported from [a tag on ${tagContent.sourceName}](${tagContent.sourceUrl}).</i>\n\n`;
     return {
       md: attributionMessage + tagContent.content,
       relatedAnswerDocIDs,
