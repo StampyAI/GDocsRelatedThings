@@ -103,14 +103,20 @@ const folders = {
   "Live on site": "1feloLCiyc3XSxfaQ0L_fqVVsFMupw2JM",
   "In progress": "1U2h3Tte38EkOff9flwo6FKVZn8OhkNLW",
   Answers: "1XUTbO31BMSBBZLhwFsvPObnuMbVVd59H",
+  "Removed answers": "1EZxiJzFNcyNi-sDdJzBXOZO3HReXkIkF",
 };
 
 export const moveAnswer = async (drive, answer) => {
-  const folderName = ["Live on site", "Subsection"].includes(
-    answer[codaColumnIDs.status]
-  )
-    ? "Live on site"
-    : "In progress";
+  let folderName;
+  const status = answer[codaColumnIDs.status];
+
+  if (status === "Marked for deletion") {
+    folderName = "Removed answers";
+  } else if (status === "Live on site" || status === "Subsection") {
+    folderName = "Live on site";
+  } else {
+    folderName = "In progress";
+  }
   const folder = folders[folderName];
 
   try {
