@@ -18,7 +18,7 @@ try {
 
   const succeeded = responses.filter((res) => res.success).length;
   const total = responses.length;
-  console.info(`Proccessed ${total} answers, ${total - succeeded} failed`);
+  console.info(`Processed ${total} answers, ${total - succeeded} failed`);
   process.exit(total - succeeded);
 } catch (e) {
   await logError(e.message, {});
