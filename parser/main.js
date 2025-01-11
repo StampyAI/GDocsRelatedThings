@@ -280,11 +280,7 @@ const parseAllAnswerDocs = async () => {
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
         Boolean(process.env.PARSE_ALL);
-      return (
-        !["Withdrawn", "Uncategorized"].includes(
-          status
-        ) && needsUpdate
-      );
+      return !["Withdrawn", "Uncategorized"].includes(status) && needsUpdate;
     })
     // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
     // too often. The `fetch()` is asynchronous, hence the magic with promises here
