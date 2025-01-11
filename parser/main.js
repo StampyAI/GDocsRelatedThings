@@ -281,7 +281,7 @@ const parseAllAnswerDocs = async () => {
         answer.answerName === "Example with all the formatting" ||
         Boolean(process.env.PARSE_ALL);
       return (
-        !["Withdrawn", "Marked for deletion", "Uncategorized"].includes(
+        !["Withdrawn", "Uncategorized"].includes(
           status
         ) && needsUpdate
       );
