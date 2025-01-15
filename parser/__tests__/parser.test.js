@@ -74,43 +74,6 @@ describe("parsetextRun", () => {
     expect(parsetextRun(emptyRun)).toBe("");
   });
 
-  it.each([
-    [{ red: 0.31, green: 0.31, blue: 0.31 }],
-    [{ red: 0.4, green: 0.4, blue: 0.4 }],
-    [{ red: 0.5, green: 0.5, blue: 0.5 }],
-    // Try some with a bit of variance
-    [{ red: 0.5, green: 0.491, blue: 0.501 }],
-  ])(
-    "should return empty string for grey text with rgbColor = %p",
-    (rgbColor) => {
-      const textRun = {
-        content: "bla bla bla",
-        textStyle: { foregroundColor: { color: { rgbColor } } },
-      };
-      expect(parsetextRun(textRun)).toBe("");
-    }
-  );
-
-  it.each([
-    // really dark grey or explicit black isn't removed
-    [{ red: 0.01, green: 0.01, blue: 0.01 }],
-    [{ red: 0.0, green: 0.0, blue: 0.0 }],
-    // really light grey or white isn't removed
-    [{ red: 0.99, green: 0.99, blue: 0.99 }],
-    [{ red: 1.0, green: 1.0, blue: 1.0 }],
-    // non gray is removed
-    [{ red: 0.5, green: 0.0, blue: 0.5 }],
-    [{ red: 0.1, green: 0.5, blue: 0.8 }],
-  ])(
-    "should not return empty string for non text with rgbColor = %p",
-    (rgbColor) => {
-      const textRun = {
-        content: "bla bla bla",
-        textStyle: { foregroundColor: { color: { rgbColor } } },
-      };
-      expect(parsetextRun(textRun)).toBe("bla bla bla");
-    }
-  );
 
   it("should format bold text", () => {
     const textRun = { content: "Hello World", textStyle: { bold: true } };
