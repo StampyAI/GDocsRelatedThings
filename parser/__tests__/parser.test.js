@@ -74,7 +74,6 @@ describe("parsetextRun", () => {
     expect(parsetextRun(emptyRun)).toBe("");
   });
 
-
   it("should format bold text", () => {
     const textRun = { content: "Hello World", textStyle: { bold: true } };
     expect(parsetextRun(textRun)).toBe("**Hello World**");
