@@ -112,7 +112,11 @@ export const moveAnswer = async (drive, answer) => {
 
   if (status === "Marked for deletion") {
     folderName = "Removed answers";
-  } else if (status === "Live on site" || status === "Subsection") {
+  } else if (
+    status === "Live on site" ||
+    status === "Subsection" ||
+    status === "Unlisted"
+  ) {
     folderName = "Live on site";
   } else {
     folderName = "In progress";
