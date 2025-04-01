@@ -147,7 +147,7 @@ export const updateGlossary = async (
       glossaryRichText: md,
       glossaryAliases: aliases,
       glossaryLastIngested: new Date().toISOString(),
-      gloassaryImage: image || undefined,
+      glossaryImage: image || undefined,
     },
     ["glossaryWord"]
   );
