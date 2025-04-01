@@ -69,7 +69,7 @@ export const getGlossary = async () => {
     questionId: row.values[codaColumnIDs.glossaryQuestionID],
     aliases: row.values[codaColumnIDs.glossaryAliases],
     lastIngested: row.values[codaColumnIDs.glossaryLastIngested],
-    image: row.values[codaColumnIDs.gloassaryImage],
+    image: row.values[codaColumnIDs.glossaryImage],
   }));
 };
 
