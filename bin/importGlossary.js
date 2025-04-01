@@ -16,8 +16,30 @@ const syncApply = (items, func) =>
   items.reduce(async (previousPromise, item) => {
     const previousResults = await previousPromise;
     try {
-      await setTimeout(5000);
-      return [...previousResults, await func(item)];
+      let retryCount = 0;
+      let success = false;
+      let result;
+      
+      while (!success && retryCount < 5) {
+        const baseDelay = 5000;
+        // Exponential backoff: 5s, 10s, 20s, 40s, 80s
+        const delay = baseDelay * Math.pow(2, retryCount);
+        console.log(`Waiting ${delay/1000}s before next request`);
+        await setTimeout(delay);
+        
+        try {
+          result = await func(item);
+          success = true;
+        } catch (err) {
+          console.error(`Attempt ${retryCount + 1} failed:`, err);
+          retryCount++;
+          if (retryCount >= 5) {
+            throw err;
+          }
+        }
+      }
+      
+      return [...previousResults, result];
     } catch (err) {
       console.error(err);
       return [...previousResults, false];
@@ -39,8 +61,8 @@ const setGlossary = async ({ term, aliases, definition, answer, image }) => {
     );
 
     if (res.status === 429) {
-      // This is fine - Coda sometimes returns this, but later lets it through. It's not a problem
-      // if an answer gets updated a bit later
+      // Rate limit hit, throw error to trigger retry with exponential backoff
+      throw new Error("Rate limit exceeded (429)");
     }
     if (res.status === 502) {
       // A lot of these get returned, but they're not really a problem on this side, so just ignore them
@@ -52,6 +74,10 @@ const setGlossary = async ({ term, aliases, definition, answer, image }) => {
       return false;
     }
   } catch (err) {
+    // If it's a rate limit error, rethrow to trigger the retry mechanism
+    if (err.message === "Rate limit exceeded (429)") {
+      throw err;
+    }
     await logError(`Could not update glossary item: ${err}`, answer);
     return false;
   }
