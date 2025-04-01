@@ -24,7 +24,9 @@ const syncApply = (items, func) =>
         const baseDelay = 5000;
         // Exponential backoff: 5s, 10s, 20s, 40s, 80s
         const delay = baseDelay * Math.pow(2, retryCount);
-        console.log(`Waiting ${delay/1000}s before next request`);
+        if (delay > 5000) {
+          console.log(`Waiting ${delay/1000}s before next request`);
+        }
         await setTimeout(delay);
         
         try {
@@ -123,17 +125,29 @@ const rows = parseElement(documentContext)(table)
     answer: getAnswer(row),
   }));
 
-// Update all glossary entries
-syncApply(rows, setGlossary);
+// Update all glossary entries and track successfully updated terms
+const updateResults = await syncApply(rows, setGlossary);
 
-// Remove any items that are in Coda but not in the Gdoc
-const terms = rows.map(({ term }) => term.toLowerCase());
-syncApply(
-  (await getGlossary()).filter(
-    ({ word }) => !terms.includes(word.toLowerCase())
-  ),
-  ({ href, word }) => {
-    console.log(" -> Deleting ", word);
-    return codaDelete(href);
-  }
-);
+// Only proceed with deletion if ALL entries were successfully updated
+const allSuccessful = updateResults.every(result => result === true);
+console.log(`\nUpdated ${updateResults.filter(r => r === true).length} out of ${rows.length} glossary entries.`);
+
+if (allSuccessful) {
+  console.log("\nAll entries were successfully updated. Proceeding with removal of outdated entries...");
+  
+  // Remove any items that are in Coda but not in the Gdoc
+  const terms = rows.map(({ term }) => term.toLowerCase());
+  syncApply(
+    (await getGlossary()).filter(
+      ({ word }) => !terms.includes(word.toLowerCase())
+    ),
+    ({ href, word }) => {
+      console.log(" -> Deleting ", word);
+      return codaDelete(href);
+    }
+  );
+} else {
+  console.log("\nSkipping deletion step because some updates failed.");
+  console.log("Please run the script again later after rate limits reset.");
+  console.log("No entries will be removed until all updates succeed.");
+}
