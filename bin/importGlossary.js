@@ -45,7 +45,7 @@ const syncApply = (items, func) =>
           // On first attempt, no additional delay
           if (retryCount > 0) {
             // Only apply exponential backoff on retries
-            const baseDelay = 10000; // Start with 10 seconds instead of 5
+            const baseDelay = 10000;
             // Exponential backoff: 10s, 20s, 40s, 80s, 160s
             const delay = baseDelay * Math.pow(2, retryCount - 1);
             console.log(
@@ -82,8 +82,8 @@ const setGlossary = async (metadata) => {
   const phrase = decode(term.trim());
 
   try {
-    const imgMatch = image?.match(/!\[\]\((.*?)\)/);
-    const newImage = imgMatch && imgMatch[1];
+    // Use the already parsed image from metadata
+    const newImage = metadata.parsedImage;
 
     // Skip updates if already determined in pre-scan
     if (metadata.existsInCoda && !metadata.needsUpdate) {
@@ -92,7 +92,12 @@ const setGlossary = async (metadata) => {
     }
 
     // Proceed with update if entry doesn't exist or needs updates
-    const imageToUpdate = updateImages ? newImage : undefined;
+    // Only update image if either
+    // 1. There was no previous image
+    // 2. The --update-images flag is provided
+    const existingImage = metadata.existingEntry?.image || "";
+    const shouldUpdateImage = existingImage === "" || updateImages;
+    const imageToUpdate = shouldUpdateImage ? newImage : undefined;
 
     const res = await updateGlossary(
       phrase,
@@ -234,42 +239,31 @@ const rowsWithMetadata = rows.map((row, index) => {
       codaAliasesNormalized !== gdocAliasesNormalized &&
       (codaAliasesNormalized || gdocAliasesNormalized); // Ignore if both empty
 
-    // By default, don't check images
+    // Always process images to detect new images that should be added by default
     let imageDifferent = false;
-    let newImage;
 
-    // Only process images if update-images flag is provided
-    if (updateImages) {
-      const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
-      newImage = imgMatch && imgMatch[1];
+    // Parse the image URL from markdown format
+    const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
+    const newImage = imgMatch?.[1];
 
-      // Check if images are different
-      const existingImage = existingEntry.image || "";
-      const newImageNormalized = newImage || "";
+    // Check if images are different
+    const existingImage = existingEntry.image || "";
+    const newImageNormalized = newImage || "";
+
+    if (existingImage === "") {
+      // If there's no existing image, always consider adding a new one
+      imageDifferent = Boolean(newImageNormalized);
+    } else {
+      // If there is an existing image, only update if --update-images flag is provided
       imageDifferent =
-        Boolean(newImageNormalized) && existingImage !== newImageNormalized;
+        updateImages &&
+        Boolean(newImageNormalized) &&
+        existingImage !== newImageNormalized;
     }
 
     // Determine if update is needed
     const needsUpdate =
       definitionDifferent || aliasesDifferent || imageDifferent;
-
-    // Only show detailed debugging info if DEBUG env var is set
-    if (needsUpdate && process.env.DEBUG) {
-      console.log(`\nDetailed debugging for "${phrase}":`);
-
-      if (definitionDifferent) {
-        console.log(`  Definition differs and will be updated`);
-      }
-
-      if (aliasesDifferent) {
-        console.log(`  Aliases differ and will be updated`);
-      }
-
-      if (imageDifferent) {
-        console.log(`  Image differs and will be updated`);
-      }
-    }
 
     return {
       row,
@@ -277,14 +271,20 @@ const rowsWithMetadata = rows.map((row, index) => {
       needsUpdate: needsUpdate,
       existsInCoda: true,
       existingEntry,
+      parsedImage: newImage,
     };
   }
+
+  // Parse image for new entries too
+  const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
+  const newImage = imgMatch?.[1];
 
   return {
     row,
     existingGlossary,
     needsUpdate: true, // New entry needs to be created
     existsInCoda: false,
+    parsedImage: newImage,
   };
 });
 
