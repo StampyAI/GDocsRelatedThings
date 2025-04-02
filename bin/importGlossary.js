@@ -199,91 +199,80 @@ console.log(
 const rowsWithMetadata = rows.map((row, index) => {
   const phrase = decode(row.term.trim());
 
-  // Normalize terms for comparison
-  const normalized = phrase.toLowerCase().trim();
+  // Normalize terms for comparison and find matching entry. Keep / and \ for FLOP/s
+  const simplifiedNormalized = phrase
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\/]/g, "");
 
-  // First, try exact match
-  let existingEntry = existingGlossary.find(
-    (entry) => entry.word.toLowerCase().trim() === normalized
-  );
+  // Find entry using a single robust matching strategy that ignores case and non-alphanumeric characters
+  const existingEntry = existingGlossary.find((entry) => {
+    const simplifiedWord = entry.word
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\/]/g, "");
+    return simplifiedWord === simplifiedNormalized;
+  });
 
-  // If exact match fails, try alternative matching strategies
+  // Parse the image URL from markdown format for all entries
+  const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
+  const newImage = imgMatch?.[1];
+
+  // If no existing entry found, create a new one (early return)
   if (!existingEntry) {
-    // Try ignoring non-alphanumeric characters
-    const simplifiedNormalized = normalized.replace(/[^a-z0-9]/g, "");
-    existingEntry = existingGlossary.find((entry) => {
-      const simplifiedWord = entry.word
-        .toLowerCase()
-        .trim()
-        .replace(/[^a-z0-9]/g, "");
-      return simplifiedWord === simplifiedNormalized;
-    });
-  }
-
-  if (existingEntry) {
-    // Only check fields that make sense to update
-    // For definitions, normalize whitespace before comparing
-    const codaDef = existingEntry.richText || "";
-    const gdocDef = row.definition || "";
-    const codaDefNormalized = codaDef.replace(/\s+/g, " ").trim();
-    const gdocDefNormalized = gdocDef.replace(/\s+/g, " ").trim();
-    const definitionDifferent = codaDefNormalized !== gdocDefNormalized;
-
-    // For aliases, only consider it different if both exist and are different
-    // Also normalize whitespace in aliases
-    const codaAliases = existingEntry.aliases || "";
-    const gdocAliases = row.aliases || "";
-    const codaAliasesNormalized = codaAliases.replace(/\s+/g, " ").trim();
-    const gdocAliasesNormalized = gdocAliases.replace(/\s+/g, " ").trim();
-    const aliasesDifferent =
-      codaAliasesNormalized !== gdocAliasesNormalized &&
-      (codaAliasesNormalized || gdocAliasesNormalized); // Ignore if both empty
-
-    // Always process images to detect new images that should be added by default
-    let imageDifferent = false;
-
-    // Parse the image URL from markdown format
-    const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
-    const newImage = imgMatch?.[1];
-
-    // Check if images are different
-    const existingImage = existingEntry.image || "";
-    const newImageNormalized = newImage || "";
-
-    if (existingImage === "") {
-      // If there's no existing image, always consider adding a new one
-      imageDifferent = Boolean(newImageNormalized);
-    } else {
-      // If there is an existing image, only update if --update-images flag is provided
-      imageDifferent =
-        updateImages &&
-        Boolean(newImageNormalized) &&
-        existingImage !== newImageNormalized;
-    }
-
-    // Determine if update is needed
-    const needsUpdate =
-      definitionDifferent || aliasesDifferent || imageDifferent;
-
     return {
       row,
       existingGlossary,
-      needsUpdate: needsUpdate,
-      existsInCoda: true,
-      existingEntry,
+      needsUpdate: true, // New entry needs to be created
+      existsInCoda: false,
       parsedImage: newImage,
     };
   }
 
-  // Parse image for new entries too
-  const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
-  const newImage = imgMatch?.[1];
+  // If we get here, we're dealing with an existing entry that may need updates
+
+  // For definitions, normalize whitespace before comparing
+  const codaDef = existingEntry.richText || "";
+  const gdocDef = row.definition || "";
+  const codaDefNormalized = codaDef.replace(/\s+/g, " ").trim();
+  const gdocDefNormalized = gdocDef.replace(/\s+/g, " ").trim();
+  const definitionDifferent = codaDefNormalized !== gdocDefNormalized;
+
+  // For aliases, only consider it different if both exist and are different
+  // Also normalize whitespace in aliases
+  const codaAliases = existingEntry.aliases || "";
+  const gdocAliases = row.aliases || "";
+  const codaAliasesNormalized = codaAliases.replace(/\s+/g, " ").trim();
+  const gdocAliasesNormalized = gdocAliases.replace(/\s+/g, " ").trim();
+  const aliasesDifferent =
+    codaAliasesNormalized !== gdocAliasesNormalized &&
+    (codaAliasesNormalized || gdocAliasesNormalized); // Ignore if both empty
+
+  // Check if images are different
+  let imageDifferent = false;
+  const existingImage = existingEntry.image || "";
+  const newImageNormalized = newImage || "";
+
+  if (existingImage === "") {
+    // If there's no existing image, always consider adding a new one
+    imageDifferent = Boolean(newImageNormalized);
+  } else {
+    // If there is an existing image, only update if --update-images flag is provided
+    imageDifferent =
+      updateImages &&
+      Boolean(newImageNormalized) &&
+      existingImage !== newImageNormalized;
+  }
+
+  // Determine if update is needed
+  const needsUpdate = definitionDifferent || aliasesDifferent || imageDifferent;
 
   return {
     row,
     existingGlossary,
-    needsUpdate: true, // New entry needs to be created
-    existsInCoda: false,
+    needsUpdate: needsUpdate,
+    existsInCoda: true,
+    existingEntry,
     parsedImage: newImage,
   };
 });
