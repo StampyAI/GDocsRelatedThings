@@ -316,83 +316,83 @@ console.log(`- ${failed} entries failed to update`);
 console.log(`- ${rows.length} total entries in Google Doc`);
 
 // Only proceed with deletion if ALL entries were successfully updated
-const allSuccessful = updateResults.every((result) => result.succeeded);
-
-if (allSuccessful) {
-  console.log(
-    "\nAll entries were successfully processed. Checking for outdated entries to remove..."
-  );
-
-  // Remove any items that are in Coda but not in the Gdoc
-  // Use a more comprehensive normalization to avoid issues with apostrophes and special chars
-  const terms = rows.map(({ term }) => {
-    const decoded = decode(term.trim());
-    let normalized = decoded.toLowerCase().trim();
-
-    // Handle common special cases that cause comparison issues
-    // Replace apostrophes with empty string for consistent matching
-    normalized = normalized.replace(/['']s\b/g, "s"); // Replace "'s" and "'s" with "s"
-    normalized = normalized.replace(/['']/g, ""); // Remove all apostrophes
-
-    return normalized;
-  });
-
-  // Debug log to see what terms we're considering valid (for debugging)
-  if (process.env.DEBUG) {
-    console.log("\nTerms from Google Doc (keeping these):");
-    console.log(terms.sort().join("\n"));
-  }
-
-  // Identify entries to delete with details on why
-  const entriesToDelete = existingGlossary.filter(({ word }) => {
-    // Use same normalization strategy for Coda entries
-    let normalizedWord = word.toLowerCase().trim();
-    normalizedWord = normalizedWord.replace(/['']s\b/g, "s");
-    normalizedWord = normalizedWord.replace(/['']/g, "");
-
-    // First try exact match
-    let found = terms.includes(normalizedWord);
-
-    // If not found, try a more flexible match
-    if (!found) {
-      found = terms.some((term) => {
-        const simplifiedTerm = term.replace(/[^a-z0-9]/g, "");
-        const simplifiedWord = normalizedWord.replace(/[^a-z0-9]/g, "");
-        return simplifiedTerm === simplifiedWord;
-      });
-    }
-
-    const shouldDelete = !found;
-
-    if (shouldDelete) {
-      console.log(`Will delete "${word}" - not found in Google Doc`);
-    }
-
-    return shouldDelete;
-  });
-
-  console.log(
-    `\nIdentified ${entriesToDelete.length} entries to delete from ${existingGlossary.length} total in Coda`
-  );
-
-  if (entriesToDelete.length > 0) {
-    const deleteResults = await syncApply(entriesToDelete, ({ href, word }) => {
-      console.log(" -> Deleting ", word);
-      return codaDelete(href);
-    });
-
-    console.log(
-      `\nDeletion complete: removed ${
-        deleteResults.filter(Boolean).length
-      } entries`
-    );
-  } else {
-    console.log(
-      "\nNo entries to delete - all Coda glossary items match entries in the Google Doc."
-    );
-  }
-} else {
+if (!updateResults.every((result) => result.succeeded)) {
   console.log("\nSkipping deletion step because some updates failed.");
   console.log("Please run the script again later after rate limits reset.");
   console.log("No entries will be removed until all updates succeed.");
+  return;
+}
+
+// All entries were successfully updated, proceed with deletion
+console.log(
+  "\nAll entries were successfully processed. Checking for outdated entries to remove..."
+);
+
+// Remove any items that are in Coda but not in the Gdoc
+// Use a more comprehensive normalization to avoid issues with apostrophes and special chars
+const terms = rows.map(({ term }) => {
+  const decoded = decode(term.trim());
+  let normalized = decoded.toLowerCase().trim();
+
+  // Handle common special cases that cause comparison issues
+  // Replace apostrophes with empty string for consistent matching
+  normalized = normalized.replace(/['']s\b/g, "s"); // Replace "'s" and "'s" with "s"
+  normalized = normalized.replace(/['']/g, ""); // Remove all apostrophes
+
+  return normalized;
+});
+
+// Debug log to see what terms we're considering valid (for debugging)
+if (process.env.DEBUG) {
+  console.log("\nTerms from Google Doc (keeping these):");
+  console.log(terms.sort().join("\n"));
+}
+
+// Identify entries to delete with details on why
+const entriesToDelete = existingGlossary.filter(({ word }) => {
+  // Use same normalization strategy for Coda entries
+  let normalizedWord = word.toLowerCase().trim();
+  normalizedWord = normalizedWord.replace(/['']s\b/g, "s");
+  normalizedWord = normalizedWord.replace(/['']/g, "");
+
+  // First try exact match
+  let found = terms.includes(normalizedWord);
+
+  // If not found, try a more flexible match
+  if (!found) {
+    found = terms.some((term) => {
+      const simplifiedTerm = term.replace(/[^a-z0-9]/g, "");
+      const simplifiedWord = normalizedWord.replace(/[^a-z0-9]/g, "");
+      return simplifiedTerm === simplifiedWord;
+    });
+  }
+
+  const shouldDelete = !found;
+
+  if (shouldDelete) {
+    console.log(`Will delete "${word}" - not found in Google Doc`);
+  }
+
+  return shouldDelete;
+});
+
+console.log(
+  `\nIdentified ${entriesToDelete.length} entries to delete from ${existingGlossary.length} total in Coda`
+);
+
+if (entriesToDelete.length > 0) {
+  const deleteResults = await syncApply(entriesToDelete, ({ href, word }) => {
+    console.log(" -> Deleting ", word);
+    return codaDelete(href);
+  });
+
+  console.log(
+    `\nDeletion complete: removed ${
+      deleteResults.filter(Boolean).length
+    } entries`
+  );
+} else {
+  console.log(
+    "\nNo entries to delete - all Coda glossary items match entries in the Google Doc."
+  );
 }
