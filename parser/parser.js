@@ -540,6 +540,8 @@ export const parseElement = (context) => (element) => {
     inlineObjectElement: parseinlineObjectElement,
     horizontalRule: parsehorizontalRule,
     table: tableParser(context),
+    // Add parsers for additional element types
+    pageBreak: () => "\n\n", // Simple parser for page breaks
   };
 
   const elementType = Object.keys(element).find(
@@ -547,6 +549,12 @@ export const parseElement = (context) => (element) => {
   );
 
   const elementContent = element[elementType];
+
+  // Add a fallback for unknown element types
+  if (!parsers[elementType]) {
+    console.warn(`Warning: Unknown element type "${elementType}" - ignoring`);
+    return "";
+  }
 
   let md = parsers[elementType](elementContent, context);
 
