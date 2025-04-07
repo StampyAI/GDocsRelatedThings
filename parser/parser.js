@@ -540,8 +540,7 @@ export const parseElement = (context) => (element) => {
     inlineObjectElement: parseinlineObjectElement,
     horizontalRule: parsehorizontalRule,
     table: tableParser(context),
-    // Add parsers for additional element types
-    pageBreak: () => "\n\n", // Simple parser for page breaks
+    pageBreak: () => "\n\n", // Page breaks will render as paragraph changes
   };
 
   const elementType = Object.keys(element).find(
