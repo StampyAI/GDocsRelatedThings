@@ -179,17 +179,22 @@ async function main() {
 
   console.log("\nAnalyzing entries for changes...");
 
+  // Pre-process normalization for all glossary entries (performance optimization)
+  const normalizedGlossary = existingGlossary.map(entry => ({
+    ...entry,
+    normalizedWord: normalizeTerm(entry.word)
+  }));
+  
   const rowsWithMetadata = rows.map((row) => {
     const phrase = decode(row.term.trim());
 
     // Normalize terms for comparison
     const normalizedPhrase = normalizeTerm(phrase);
 
-    // Find entry using a robust matching strategy
-    const existingEntry = existingGlossary.find((entry) => {
-      const normalizedWord = normalizeTerm(entry.word);
-      return normalizedWord === normalizedPhrase;
-    });
+    // Find entry using pre-normalized values (much faster lookup)
+    const existingEntry = normalizedGlossary.find(entry => 
+      entry.normalizedWord === normalizedPhrase
+    );
 
     // Parse the image URL from markdown format
     const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
@@ -365,26 +370,23 @@ async function main() {
 
   console.log("\nChecking for outdated entries to remove...");
 
-  // Normalize all terms from Google Doc for comparison
-  const normalizedTerms = rows.map(({ term }) => normalizeTerm(term));
+  // Normalize all terms from Google Doc for comparison - create a Set for O(1) lookups
+  const normalizedTermsSet = new Set(rows.map(({ term }) => normalizeTerm(term)));
 
   // Debug log for troubleshooting
   if (process.env.DEBUG) {
     console.log("\nTerms from Google Doc (keeping these):");
-    console.log(normalizedTerms.sort().join("\n"));
+    console.log([...normalizedTermsSet].sort().join("\n"));
   }
 
-  // Identify entries to delete
-  const entriesToDelete = existingGlossary.filter(({ word }) => {
-    // Normalize the Coda entry using the same strategy
-    const normalizedWord = normalizeTerm(word);
-
-    // Check if the normalized word matches any normalized term
-    const found = normalizedTerms.includes(normalizedWord);
+  // Identify entries to delete (use the already normalized values from before)
+  const entriesToDelete = normalizedGlossary.filter((entry) => {
+    // Check if the normalized word matches any normalized term - O(1) lookup with Set
+    const found = normalizedTermsSet.has(entry.normalizedWord);
     const shouldDelete = !found;
 
     if (shouldDelete) {
-      console.log(`Will delete "${word}" - not found in Google Doc`);
+      console.log(`Will delete "${entry.word}" - not found in Google Doc`);
     }
 
     return shouldDelete;
