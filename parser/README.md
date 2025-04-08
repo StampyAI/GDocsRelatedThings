@@ -38,3 +38,12 @@
       - The count and total size of all suggestions generated in 2.v.b.b.b.b
 3. Shove all this new data into the row in Coda
 4. TODO: Send an update on the suggestion count / size to Discord
+
+## Glossary parsing (importGlossary.js) overview
+
+1. The current Glossary is pulled from Coda (https://coda.io/d/AI-Safety-Info_dfau7sl2hmG/Glossary_sufcEZVl)
+2. The (new) Glossary is pulled from Google Drive (https://docs.google.com/document/d/1Rm7tN5zTErZq0E4qqAZoNVzClS94Kb_rQOLaViu2p6c)
+3. They are compared to determine if some fields need to be updated
+   - Unless the --update-images flag is provided, only images for new glossary entries will be added
+4. The entries that need updates are updated
+5. If the previous step has succeeded, outdated entries are removed from Coda
