@@ -180,11 +180,11 @@ async function main() {
   console.log("\nAnalyzing entries for changes...");
 
   // Pre-process normalization for all glossary entries (performance optimization)
-  const normalizedGlossary = existingGlossary.map(entry => ({
+  const normalizedGlossary = existingGlossary.map((entry) => ({
     ...entry,
-    normalizedWord: normalizeTerm(entry.word)
+    normalizedWord: normalizeTerm(entry.word),
   }));
-  
+
   const rowsWithMetadata = rows.map((row) => {
     const phrase = decode(row.term.trim());
 
@@ -192,8 +192,8 @@ async function main() {
     const normalizedPhrase = normalizeTerm(phrase);
 
     // Find entry using pre-normalized values (much faster lookup)
-    const existingEntry = normalizedGlossary.find(entry => 
-      entry.normalizedWord === normalizedPhrase
+    const existingEntry = normalizedGlossary.find(
+      (entry) => entry.normalizedWord === normalizedPhrase
     );
 
     // Parse the image URL from markdown format
@@ -371,7 +371,9 @@ async function main() {
   console.log("\nChecking for outdated entries to remove...");
 
   // Normalize all terms from Google Doc for comparison - create a Set for O(1) lookups
-  const normalizedTermsSet = new Set(rows.map(({ term }) => normalizeTerm(term)));
+  const normalizedTermsSet = new Set(
+    rows.map(({ term }) => normalizeTerm(term))
+  );
 
   // Debug log for troubleshooting
   if (process.env.DEBUG) {
