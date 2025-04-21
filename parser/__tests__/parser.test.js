@@ -501,7 +501,7 @@ describe("parseDoc", () => {
   beforeEach(() => {
     fetchMock.resetMocks();
   });
-  
+
   it("ensures proper spacing between paragraphs and list items", async () => {
     // Create a simple doc with a list - giving unique startIndex values for each paragraph element
     const doc = {
@@ -509,45 +509,53 @@ describe("parseDoc", () => {
         content: [
           {
             paragraph: {
-              elements: [{ startIndex: 100, textRun: { content: "Regular paragraph" } }],
-            }
+              elements: [
+                { startIndex: 100, textRun: { content: "Regular paragraph" } },
+              ],
+            },
           },
           {
             paragraph: {
-              elements: [{ startIndex: 200, textRun: { content: "First bullet" } }],
-              bullet: { listId: "list1", nestingLevel: 0 }
-            }
+              elements: [
+                { startIndex: 200, textRun: { content: "First bullet" } },
+              ],
+              bullet: { listId: "list1", nestingLevel: 0 },
+            },
           },
           {
             paragraph: {
-              elements: [{ startIndex: 300, textRun: { content: "Second bullet" } }],
-              bullet: { listId: "list1", nestingLevel: 0 }
-            }
+              elements: [
+                { startIndex: 300, textRun: { content: "Second bullet" } },
+              ],
+              bullet: { listId: "list1", nestingLevel: 0 },
+            },
           },
           {
             paragraph: {
-              elements: [{ startIndex: 400, textRun: { content: "Another paragraph" } }],
-            }
+              elements: [
+                { startIndex: 400, textRun: { content: "Another paragraph" } },
+              ],
+            },
           },
         ],
       },
       lists: {
         list1: {
           listProperties: {
-            nestingLevels: [{ glyphSymbol: "-" }]
-          }
-        }
+            nestingLevels: [{ glyphSymbol: "-" }],
+          },
+        },
       },
       footnotes: {},
     };
-    
+
     // Process the document
     const result = await parseDoc(doc);
-    
+
     // Verify bullet points have correct markup
     expect(result.md).toContain("- First bullet");
     expect(result.md).toContain("- Second bullet");
-    
+
     // Verify paragraphs and lists have double newlines
     expect(result.md).toContain("Regular paragraph\n\n- First bullet");
     expect(result.md).toContain("Second bullet\n\nAnother paragraph");

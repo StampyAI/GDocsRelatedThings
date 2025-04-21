@@ -111,8 +111,10 @@ export const parseDoc = async (doc, answer) => {
   }
 
   // Process paragraphs and join with double newlines for spacing
-  const processedParagraphs = paragraphs.map(parseParagraph(documentContext)).filter(Boolean);
-  const body = processedParagraphs.join('\n\n');
+  const processedParagraphs = paragraphs
+    .map(parseParagraph(documentContext))
+    .filter(Boolean);
+  const body = processedParagraphs.join("\n\n");
   const footnotes = extractFootnotes(documentContext, doc);
 
   const md = body + "\n\n" + footnotes;

@@ -43,10 +43,10 @@ yargs(hideBin(process.argv))
         const docJSON = await getDocJSON(documentId);
         // Get the markdown content
         let md = (await parseDoc(docJSON)).md;
-        
+
         // Apply the same fixes from compressMarkdown in utils.js
         md = compressMarkdown(md);
-        
+
         console.log(md);
       } catch (e) {
         if (e.code === 404) {
