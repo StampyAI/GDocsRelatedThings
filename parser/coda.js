@@ -21,17 +21,56 @@ const getRows = async (tableURL) => {
   let isScanComplete = false;
   let rows = [];
   while (isScanComplete === false) {
-    const { items: answerBatch, nextPageLink = null } = await codaRequest(
-      queryURL
-    ).then((r) => r.json());
-    if (answerBatch) rows = rows.concat(answerBatch);
+    try {
+      const response = await codaRequest(queryURL);
 
-    // If there are more rows we haven't yet retrieved, Coda gives us a link we can access to get the next page
-    if (nextPageLink) {
-      queryURL = nextPageLink;
-      // If that link isn't provided, we can assume we've retrieved all rows
-    } else {
-      isScanComplete = true;
+      // Check if content type is JSON, if not, try to get the HTML for debugging
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        console.warn(`Unexpected content type from Coda API: ${contentType}`);
+
+        // Get the raw response to diagnose the issue
+        const rawText = await response.text();
+
+        // Create a new error with the HTML content attached
+        const parseError = new SyntaxError(
+          `Unexpected token, received non-JSON response with content type: ${contentType}`
+        );
+        parseError.rawHtml = rawText;
+        parseError.status = response.status;
+        parseError.url = queryURL;
+        throw parseError;
+      }
+
+      // If we reach here, proceed with JSON parsing
+      const responseData = await response.json();
+      const answerBatch = responseData.items;
+      const nextPageLink = responseData.nextPageLink;
+
+      if (answerBatch) rows = rows.concat(answerBatch);
+
+      // If there are more rows we haven't yet retrieved, Coda gives us a link we can access to get the next page
+      if (nextPageLink) {
+        queryURL = nextPageLink;
+        // If that link isn't provided, we can assume we've retrieved all rows
+      } else {
+        isScanComplete = true;
+      }
+    } catch (error) {
+      console.error(`Error fetching rows from ${queryURL}: ${error.message}`);
+
+      // If this is already our custom error with HTML attached, just rethrow it
+      if (error.rawHtml) {
+        throw error;
+      }
+
+      // Otherwise wrap the error with more context
+      const wrappedError = new Error(
+        `Failed to fetch rows from Coda: ${error.message}`
+      );
+      wrappedError.originalError = error;
+      wrappedError.url = queryURL;
+      throw wrappedError;
     }
   }
   return rows;
