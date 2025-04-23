@@ -419,5 +419,24 @@ async function main() {
 // Run the main function
 main().catch((error) => {
   console.error("Error in glossary import process:", error);
+
+  // Special handling for JSON parse errors that might indicate HTML responses
+  if (
+    error instanceof SyntaxError &&
+    error.message.includes("Unexpected token")
+  ) {
+    console.error(
+      "Received non-JSON response. This might be an HTML error page."
+    );
+
+    // If we have the raw response text, log it for diagnosis
+    if (error.rawHtml) {
+      console.error("HTML response received:");
+      console.error("----------------------------------------");
+      console.error(error.rawHtml.substring(0, 2000)); // Log first 2000 chars to avoid excessive output
+      console.error("----------------------------------------");
+    }
+  }
+
   process.exit(1);
 });

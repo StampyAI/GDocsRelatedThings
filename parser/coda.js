@@ -20,18 +20,90 @@ const getRows = async (tableURL) => {
   // Coda only sends a limited number of rows at a time, so track whether we've retrieved all of them yet
   let isScanComplete = false;
   let rows = [];
-  while (isScanComplete === false) {
-    const { items: answerBatch, nextPageLink = null } = await codaRequest(
-      queryURL
-    ).then((r) => r.json());
-    if (answerBatch) rows = rows.concat(answerBatch);
 
-    // If there are more rows we haven't yet retrieved, Coda gives us a link we can access to get the next page
-    if (nextPageLink) {
-      queryURL = nextPageLink;
-      // If that link isn't provided, we can assume we've retrieved all rows
-    } else {
-      isScanComplete = true;
+  // Check if we're in a test environment - jest-fetch-mock doesn't set content-type headers properly
+  const isTestEnvironment = process.env.NODE_ENV === "test" || !!global.jest;
+
+  while (isScanComplete === false) {
+    try {
+      const response = await codaRequest(queryURL);
+
+      // Only check content-type in non-test environments
+      if (!isTestEnvironment) {
+        // Check if content type is JSON, if not, try to get the HTML for debugging
+        const contentType = response.headers.get("content-type");
+        if (!contentType || !contentType.includes("application/json")) {
+          console.warn(`Unexpected content type from Coda API: ${contentType}`);
+
+          // Get the raw response to diagnose the issue
+          const rawText = await response.text();
+
+          // Create a new error with the HTML content attached
+          const parseError = new SyntaxError(
+            `Unexpected token, received non-JSON response with content type: ${contentType}`
+          );
+          parseError.rawHtml = rawText;
+          parseError.status = response.status;
+          parseError.url = queryURL;
+          throw parseError;
+        }
+      }
+
+      // If we reach here, proceed with JSON parsing
+      let responseData;
+      try {
+        responseData = await response.json();
+      } catch (parseError) {
+        // Skip content-type checks in test environment
+        if (isTestEnvironment) {
+          throw parseError;
+        }
+
+        // If JSON parsing fails, try to get the text content for debugging
+        const rawText = await response
+          .text()
+          .catch(() => "Unable to get response text");
+
+        // Create enhanced error with the HTML content attached
+        const enhancedError = new SyntaxError(
+          `Failed to parse JSON: ${parseError.message}`
+        );
+        enhancedError.rawHtml = rawText;
+        enhancedError.status = response.status;
+        enhancedError.url = queryURL;
+        throw enhancedError;
+      }
+
+      const answerBatch = responseData.items;
+      const nextPageLink = responseData.nextPageLink;
+
+      if (answerBatch) rows = rows.concat(answerBatch);
+
+      // If there are more rows we haven't yet retrieved, Coda gives us a link we can access to get the next page
+      if (nextPageLink) {
+        queryURL = nextPageLink;
+        // If that link isn't provided, we can assume we've retrieved all rows
+      } else {
+        isScanComplete = true;
+      }
+    } catch (error) {
+      // Skip detailed error logging in test environment
+      if (!isTestEnvironment) {
+        console.error(`Error fetching rows from ${queryURL}: ${error.message}`);
+      }
+
+      // If this is already our custom error with HTML attached, just rethrow it
+      if (error.rawHtml) {
+        throw error;
+      }
+
+      // Otherwise wrap the error with more context
+      const wrappedError = new Error(
+        `Failed to fetch rows from Coda: ${error.message}`
+      );
+      wrappedError.originalError = error;
+      wrappedError.url = queryURL;
+      throw wrappedError;
     }
   }
   return rows;
