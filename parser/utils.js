@@ -17,8 +17,27 @@ export const compressMarkdown = (md) => {
     currentSize = ret.length;
   }
 
-  // Also clear out excessive newlines, we get a lot of those
-  ret = ret.replaceAll(/\n\n(\n+)/g, "\n\n");
+  // First step: Remove all trailing whitespace from lines
+  ret = ret.replace(/[ \t]+$/gm, "");
+
+  // Post-process to ensure no consecutive empty lines (fixes display issues)
+  ret = ret.replace(/\n{2,}/g, "\n\n");
+
+  // Fix unordered list spacing - normalize all items to single lines
+  // This pattern handles any number of consecutive bullet points with any amount of spacing between them
+  ret = ret.replace(/^(\s*-[^\n]+\n)(?:\s*\n)*(?=\s*-)/gm, "$1");
+
+  // Fix ordered list spacing - normalize all items to single lines
+  // Similar pattern for numbered lists
+  ret = ret.replace(/^(\s*\d+\.[^\n]+\n)(?:\s*\n)*(?=\s*\d+\.)/gm, "$1");
+
+  // Ensure proper spacing between list items and paragraphs
+  ret = ret.replace(/^(\s*-[^\n]+?\n)([^-\s])/gm, "$1\n$2");
+  ret = ret.replace(/^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm, "$1\n$2");
+
+  // Ensure no trailing newlines
+  ret = ret.replace(/\n+$/, "");
+
   currentSize = ret.length;
 
   return ret;
