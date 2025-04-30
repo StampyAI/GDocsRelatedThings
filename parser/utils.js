@@ -1,4 +1,5 @@
 import fetch from "node-fetch";
+import { tableURL, codaColumnIDs, glossaryTableURL } from "./constants.js";
 
 const pprint = (data) => console.log(JSON.stringify(data, null, 2));
 
@@ -79,6 +80,12 @@ export const sendToDiscord = (
   });
 };
 
+/**
+ * Logs error to Discord channel using current pattern
+ * @param {string} msg - Error message
+ * @param {Object} answer - Answer context
+ * @param {Error} error - Error object
+ */
 export const logError = (msg, answer, error) => {
   console.error(msg, error?.message || "");
 
@@ -101,4 +108,79 @@ export const logError = (msg, answer, error) => {
     ],
   };
   return sendToDiscord(messageContent, true);
+};
+
+/**
+ * Executes a function with exponential backoff retry
+ * @param {Function} fn - Async function to execute
+ * @param {string} operationName - Name of operation for logging
+ * @param {Object} options - Options for retry behavior
+ * @param {number} [options.maxRetries=5] - Maximum number of retry attempts
+ * @param {number} [options.baseDelayMs=10000] - Base delay for exponential backoff in ms
+ * @param {Function} [options.isRetryable] - Custom function to determine if an error is retryable
+ * @returns {Promise<any>} - Result of the function
+ */
+export const withRetry = async (fn, operationName, options = {}) => {
+  // Configuration constants for retry
+  const BASE_RETRY_DELAY_MS = 10000; // Base delay for exponential backoff (10 seconds)
+  const MAX_RETRIES = 5; // Maximum number of retry attempts
+
+  const maxRetries = options.maxRetries || MAX_RETRIES;
+  const baseDelayMs = options.baseDelayMs || BASE_RETRY_DELAY_MS;
+
+  // Default retryable error check - focus on HTTP status codes
+  const defaultIsRetryable = (error) => {
+    // Get status code from either source (Google API or Coda API format)
+    const status = error?.response?.status || error?.status;
+
+    if (status) {
+      return (
+        status === 429 || status === 502 || status === 503 || status === 504
+      );
+    }
+
+    return false;
+  };
+
+  const isRetryable = options.isRetryable || defaultIsRetryable;
+
+  let retryCount = 0;
+  let success = false;
+
+  while (!success && retryCount < maxRetries) {
+    try {
+      const result = await fn();
+      success = true;
+      return result;
+    } catch (error) {
+      retryCount++;
+
+      // Check if this is a retryable error
+      if (!isRetryable(error)) {
+        // Don't retry for non-retryable errors
+        throw error;
+      }
+
+      // If we've reached max attempts, give up
+      if (retryCount >= maxRetries) {
+        console.error(
+          `${operationName} failed after ${maxRetries} attempts:`,
+          error.message
+        );
+        throw error;
+      }
+
+      // Calculate exponential backoff delay
+      const delay = baseDelayMs * Math.pow(2, retryCount - 1);
+      console.log(
+        `${operationName} failed (attempt ${retryCount}/${maxRetries}). Retrying in ${
+          delay / 1000
+        }s...`
+      );
+      console.log(`Error: ${error.message}`);
+
+      // Wait before retrying
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
 };

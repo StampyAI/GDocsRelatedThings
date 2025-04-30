@@ -1,18 +1,21 @@
 import { tableURL, codaColumnIDs, glossaryTableURL } from "./constants.js";
+import { withRetry } from "./utils.js";
 
 export const getDocIDFromLink = (docLink) =>
   docLink.match(/https:\/\/\w+.google.com\/(\w+\/)+(?<docID>[_-\w]{25,}).*/)
     ?.groups?.docID || null;
 
 const codaRequest = async (url, options = { headers: {} }) =>
-  fetch(encodeURI(url), {
-    timeout: 5000,
-    ...options,
-    headers: {
-      ...options.headers,
-      Authorization: `Bearer ${process.env.CODA_TOKEN}`,
-    },
-  });
+  withRetry(async () => {
+    return fetch(encodeURI(url), {
+      timeout: 5000,
+      ...options,
+      headers: {
+        ...options.headers,
+        Authorization: `Bearer ${process.env.CODA_TOKEN}`,
+      },
+    });
+  }, `Coda API request to ${url.split("?")[0]}`); // Log URL without query params
 
 const getRows = async (tableURL) => {
   let queryURL = `${tableURL}/rows`;

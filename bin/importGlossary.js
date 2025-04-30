@@ -9,7 +9,7 @@ import {
 import { parseElement } from "../parser/parser.js";
 import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
-import { logError } from "../parser/utils.js";
+import { logError, withRetry } from "../parser/utils.js";
 import { replaceImages } from "../parser/cloudflare.js";
 
 // --------------------------------------------------------------------------
@@ -20,8 +20,7 @@ import { replaceImages } from "../parser/cloudflare.js";
 const args = process.argv.slice(2);
 const updateImages = args.includes("--update-images");
 
-// Configuration constants
-const BASE_RETRY_DELAY_MS = 10000; // Base delay for exponential backoff (10 seconds)
+// Configuration constant
 const OPERATION_SPACING_MS = 1000; // Delay between operations (1 second)
 
 /**
@@ -278,7 +277,7 @@ async function main() {
   console.log("\nUpdating glossary entries...");
 
   /**
-   * Sequentially applies a function to an array of items with retry logic
+   * Sequentially applies a function to an array of items with spacing between operations
    * @param {Array} items - Items to process
    * @param {Function} func - Function to apply to each item
    * @returns {Promise<Array>} - Results of processing
@@ -299,35 +298,11 @@ async function main() {
         // Add a delay between API operations to avoid rate limiting
         await setTimeout(OPERATION_SPACING_MS);
 
-        // Try to process the item with exponential backoff
-        let retryCount = 0;
-        let success = false;
-        let result;
-
-        while (!success && retryCount < 5) {
-          try {
-            // Apply exponential backoff on retries
-            if (retryCount > 0) {
-              // Exponential backoff: 10s, 20s, 40s, 80s, 160s
-              const delay = BASE_RETRY_DELAY_MS * Math.pow(2, retryCount - 1);
-              console.log(
-                `Waiting ${delay / 1000}s before retry attempt ${
-                  retryCount + 1
-                }`
-              );
-              await setTimeout(delay);
-            }
-
-            result = await func(item);
-            success = true;
-          } catch (err) {
-            console.log(`Attempt ${retryCount + 1} failed: ${err.message}`);
-            retryCount++;
-            if (retryCount >= 5) {
-              throw err;
-            }
-          }
-        }
+        // Process the item with our central withRetry utility
+        const result = await withRetry(
+          async () => func(item),
+          `Update glossary for "${item.row?.term || "unknown"}"`
+        );
 
         return [...previousResults, result];
       } catch (err) {
