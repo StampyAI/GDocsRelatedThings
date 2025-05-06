@@ -128,7 +128,7 @@ export const withRetry = async (fn, operationName, options = {}) => {
   const maxRetries = options.maxRetries || MAX_RETRIES;
   const baseDelayMs = options.baseDelayMs || BASE_RETRY_DELAY_MS;
 
-  // Default retryable error check - focus on HTTP status codes
+  // Default retryable error check - handle both status codes and content type errors
   const defaultIsRetryable = (error) => {
     // Get status code from either source (Google API or Coda API format)
     const status = error?.response?.status || error?.status;
@@ -137,6 +137,16 @@ export const withRetry = async (fn, operationName, options = {}) => {
       return (
         status === 429 || status === 502 || status === 503 || status === 504
       );
+    }
+
+    // Check for content type mismatch errors (HTML instead of JSON)
+    if (
+      error instanceof SyntaxError &&
+      (error.message.includes("Unexpected token") ||
+        error.message.includes("non-JSON response"))
+    ) {
+      console.log("Detected HTML response instead of JSON - will retry");
+      return true;
     }
 
     return false;
@@ -167,6 +177,13 @@ export const withRetry = async (fn, operationName, options = {}) => {
           `${operationName} failed after ${maxRetries} attempts:`,
           error.message
         );
+
+        // Log more details about the error for debugging
+        if (error instanceof SyntaxError && error.rawHtml) {
+          console.error("Failed with HTML response (first 500 chars):");
+          console.error(error.rawHtml.substring(0, 500));
+        }
+
         throw error;
       }
 
