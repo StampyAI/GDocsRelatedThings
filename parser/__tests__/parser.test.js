@@ -765,7 +765,7 @@ describe("parseDoc", () => {
   it("parses a document with a LessWrong tag", async () => {
     const doc = {
       body: {
-        content: [makeText("https://www.lesswrong.com/tag/some-tag")],
+        content: [makeText("https://www.lesswrong.com/w/some-tag")],
       },
     };
 
@@ -773,7 +773,7 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "<i>This text was automatically imported from [a tag on LessWrong](https://www.lesswrong.com/tag/some-tag).</i>\n\n" +
+      "<i>This text was automatically imported from [a tag on LessWrong](https://www.lesswrong.com/w/some-tag).</i>\n\n" +
         "This is an example LW tag content (see mockResponse)"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
@@ -801,7 +801,7 @@ describe("parseDoc", () => {
     const doc = {
       body: {
         content: [
-          makeText("https://www.lesswrong.com/tag/some-tag"),
+          makeText("https://www.lesswrong.com/w/some-tag"),
           makeText(
             "This will cause it to be shown as is, rather than fetching the content"
           ),
@@ -812,7 +812,7 @@ describe("parseDoc", () => {
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
-      "https://www.lesswrong.com/tag/some-tag\n\nThis will cause it to be shown as is, rather than fetching the content\n\n"
+      "https://www.lesswrong.com/w/some-tag\n\nThis will cause it to be shown as is, rather than fetching the content\n\n"
     );
     expect(result.relatedAnswerDocIDs).toEqual([]);
   });
@@ -869,7 +869,7 @@ describe("fetchExternalContent", () => {
 
   it("parses a document with a LessWrong tag and a related section", async () => {
     const paragraphs = [
-      makeText("https://www.lesswrong.com/tag/some-tag").paragraph,
+      makeText("https://www.lesswrong.com/w/some-tag").paragraph,
       makeText("\n").paragraph,
       makeText("  ").paragraph,
       makeText("").paragraph,
@@ -880,13 +880,13 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
       sourceName: "LessWrong",
-      sourceUrl: "https://www.lesswrong.com/tag/some-tag",
+      sourceUrl: "https://www.lesswrong.com/w/some-tag",
     });
   });
 
   it("ignores comments and suggested edits", async () => {
     const paragraphs = [
-      makeText("https://www.lesswrong.com/tag/some-tag").paragraph,
+      makeText("https://www.lesswrong.com/w/some-tag").paragraph,
       {
         elements: [
           {
@@ -917,7 +917,7 @@ describe("fetchExternalContent", () => {
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
       sourceName: "LessWrong",
-      sourceUrl: "https://www.lesswrong.com/tag/some-tag",
+      sourceUrl: "https://www.lesswrong.com/w/some-tag",
     });
   });
 });

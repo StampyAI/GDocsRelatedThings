@@ -157,7 +157,7 @@ export const fetchExternalContent = async (paragraphs) => {
 
   const tagHandlers = [
     [
-      /https:\/\/(www.)?lesswrong.com\/tag\/(?<tagName>[A-z0-9_-]+)/,
+      /https:\/\/(www.)?lesswrong.com\/w\/(?<tagName>[A-z0-9_-]+)/,
       getLWTag,
       "LessWrong",
     ],
@@ -167,7 +167,7 @@ export const fetchExternalContent = async (paragraphs) => {
       "the EA Forum",
     ],
     [
-      /https:\/\/(www.)?alignmentforum.org\/tag\/(?<tagName>[A-z0-9_-]+)/,
+      /https:\/\/(www.)?alignmentforum.org\/w\/(?<tagName>[A-z0-9_-]+)/,
       getAFTag,
       "the Alignment Forum",
     ],
