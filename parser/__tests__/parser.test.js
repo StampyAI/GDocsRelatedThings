@@ -36,13 +36,15 @@ describe("getTag", () => {
   it("Footnotes are handled correctly", async () => {
     const mockResponse = {
       data: {
-        tag: {
-          result: {
-            description: {
-              markdown: `This is an example LW tag content (see mockResponse) ^[\\[123\\]](#fn0f5x8s34vee)^.
+        tags: {
+          results: [
+            {
+              description: {
+                markdown: `This is an example LW tag content (see mockResponse) ^[\\[123\\]](#fn0f5x8s34vee)^.
 123.  ^**[^](#fnref0f5x8s34vee)**^\n    \n    And this is a footnote`,
+              },
             },
-          },
+          ],
         },
       },
     };
@@ -752,12 +754,14 @@ describe("parseDoc", () => {
 
   const mockResponse = {
     data: {
-      tag: {
-        result: {
-          description: {
-            markdown: `This is an example LW tag content (see mockResponse)`,
+      tags: {
+        results: [
+          {
+            description: {
+              markdown: `This is an example LW tag content (see mockResponse)`,
+            },
           },
-        },
+        ],
       },
     },
   };
@@ -825,12 +829,14 @@ describe("fetchExternalContent", () => {
 
   const mockResponse = {
     data: {
-      tag: {
-        result: {
-          description: {
-            markdown: `This is an example LW tag content (see mockResponse)`,
+      tags: {
+        results: [
+          {
+            description: {
+              markdown: `This is an example LW tag content (see mockResponse)`,
+            },
           },
-        },
+        ],
       },
     },
   };
