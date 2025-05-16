@@ -190,22 +190,50 @@ const LWGraphQLQuery = async (host, query) => {
   return await result.json();
 };
 
+/**
+ * Fetches tag content from LessWrong, EA Forum, or Alignment Forum using the GraphQL API
+ */
 export const getTag = async (host, tagName) => {
-  const tagQuery = `tag(input:{selector:{slug:"${tagName}"}})`;
-  const asMd = await LWGraphQLQuery(
-    host,
-    `{${tagQuery}{result{description{markdown,version}}}}`
-  );
+  const tagsQuery = `{ 
+    tags(input: {
+      terms: {
+        view: "tagBySlug", 
+        slug: "${tagName}"
+      }
+    }) { 
+      results { 
+        description { 
+          markdown,
+          version
+        } 
+      } 
+    } 
+  }`;
 
-  if (asMd?.data?.tag?.result?.description?.version < "1.1.0") {
-    const contents = await LWGraphQLQuery(
-      host,
-      `{${tagQuery}{result{htmlWithContributorAnnotations}}}`
-    );
-    return contents?.data?.tag?.result?.htmlWithContributorAnnotations;
+  const asMd = await LWGraphQLQuery(host, tagsQuery);
+
+  // Check the version to determine how to handle the content
+  // If version is less than 1.1.0, we need to fetch the HTML version
+  if (asMd?.data?.tags?.results?.[0]?.description?.version < "1.1.0") {
+    const htmlQuery = `{ 
+      tags(input: {
+        terms: {
+          view: "tagBySlug", 
+          slug: "${tagName}"
+        }
+      }) { 
+        results { 
+          htmlWithContributorAnnotations
+        } 
+      } 
+    }`;
+
+    const contents = await LWGraphQLQuery(host, htmlQuery);
+    return contents?.data?.tags?.results?.[0]?.htmlWithContributorAnnotations;
   }
 
-  const md = asMd?.data?.tag?.result?.description?.markdown || "";
+  // For newer version tags, use the markdown content
+  const md = asMd?.data?.tags?.results?.[0]?.description?.markdown || "";
 
   // EAF mostly gives us valid markdown but their citations are in a really weird format
   // It's unlike anything I can see in the reference material I'm using to write our markdown
