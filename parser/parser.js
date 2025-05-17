@@ -203,8 +203,7 @@ export const getTag = async (host, tagName) => {
     }) { 
       results { 
         description { 
-          markdown,
-          version
+          markdown
         } 
       } 
     } 
@@ -212,27 +211,7 @@ export const getTag = async (host, tagName) => {
 
   const asMd = await LWGraphQLQuery(host, tagsQuery);
 
-  // Check the version to determine how to handle the content
-  // If version is less than 1.1.0, we need to fetch the HTML version
-  if (asMd?.data?.tags?.results?.[0]?.description?.version < "1.1.0") {
-    const htmlQuery = `{ 
-      tags(input: {
-        terms: {
-          view: "tagBySlug", 
-          slug: "${tagName}"
-        }
-      }) { 
-        results { 
-          htmlWithContributorAnnotations
-        } 
-      } 
-    }`;
-
-    const contents = await LWGraphQLQuery(host, htmlQuery);
-    return contents?.data?.tags?.results?.[0]?.htmlWithContributorAnnotations;
-  }
-
-  // For newer version tags, use the markdown content
+  // Use the markdown content
   const md = asMd?.data?.tags?.results?.[0]?.description?.markdown || "";
 
   // EAF mostly gives us valid markdown but their citations are in a really weird format
