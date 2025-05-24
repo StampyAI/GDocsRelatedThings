@@ -31,6 +31,7 @@ export const codaColumnIDs = {
   alternativePhrasings: "c-bLWz7lnXHG",
   tags: "c-fW9FG_MXY0",
   banners: "c-xODpP0JOAn",
+  needsProcessing: "c-u2DRC1IgsQ",
 
   glossaryWord: "c-QdLiDUKLm0",
   glossaryRichText: "c-KXNjnKWLkC",

@@ -276,8 +276,7 @@ const parseAllAnswerDocs = async () => {
       const lastDocEditDate = new Date(answer[codaColumnIDs.docLastEdited]);
       const status = answer[codaColumnIDs.status];
       const needsUpdate =
-        lastIngestDateString === "" ||
-        lastDocEditDate > lastIngestDate ||
+        answer[codaColumnIDs.needsProcessing] === true ||
         answer.answerName === "Example with all the formatting" ||
         Boolean(process.env.PARSE_ALL);
       return !["Withdrawn", "Uncategorized"].includes(status) && needsUpdate;
