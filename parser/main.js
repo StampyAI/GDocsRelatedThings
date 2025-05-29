@@ -276,6 +276,7 @@ const parseAllAnswerDocs = async () => {
       const lastDocEditDate = new Date(answer[codaColumnIDs.docLastEdited]);
       const status = answer[codaColumnIDs.status];
       const needsUpdate =
+        answer[codaColumnIDs.needsProcessing] === true ||
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
