@@ -57,13 +57,13 @@ describe("getTag", () => {
     );
   });
 
-  it("should return empty string for invalid input", async () => {
+  it("should return error message for invalid input", async () => {
     const mockResponse = { data: {} };
     fetchMock.mockResponse(JSON.stringify(mockResponse));
 
     const result = await getTag("https://bla.bla", "test");
 
-    expect(result).toEqual("");
+    expect(result).toEqual("Failed to fetch tag");
   });
 });
 
