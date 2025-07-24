@@ -186,6 +186,10 @@ export const fetchExternalContent = async (paragraphs) => {
 const LWGraphQLQuery = async (host, query) => {
   const result = await fetch(encodeURI(`${host}/graphql?query=${query}`), {
     timeout: 5000,
+    headers: {
+      "Content-Type": "application/json",
+      "x-apollo-operation-name": "GetTag",
+    },
   });
   return await result.json();
 };
@@ -212,7 +216,9 @@ export const getTag = async (host, tagName) => {
   const asMd = await LWGraphQLQuery(host, tagsQuery);
 
   // Use the markdown content
-  const md = asMd?.data?.tags?.results?.[0]?.description?.markdown || "";
+  const md =
+    asMd?.data?.tags?.results?.[0]?.description?.markdown ||
+    "Failed to fetch tag";
 
   // EAF mostly gives us valid markdown but their citations are in a really weird format
   // It's unlike anything I can see in the reference material I'm using to write our markdown
