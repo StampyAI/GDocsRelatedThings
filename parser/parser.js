@@ -114,10 +114,40 @@ export const parseDoc = async (doc, answer) => {
   const processedParagraphs = paragraphs
     .map(parseParagraph(documentContext))
     .filter(Boolean);
-  const body = processedParagraphs.join("\n\n");
+
+  // Join paragraphs with special handling for consecutive blockquotes
+  let body = "";
+  let lastWasBlockquote = false;
+
+  for (let i = 0; i < processedParagraphs.length; i++) {
+    const current = processedParagraphs[i];
+    const isCurrentBlockquote = current.startsWith(">");
+    const isEmptyBlockquote = current.trim() === ">";
+
+    if (body.length > 0) {
+      // Add separator between paragraphs
+      if (lastWasBlockquote && isCurrentBlockquote) {
+        // Between blockquotes: if current is empty blockquote, just add it without extra separator
+        if (isEmptyBlockquote) {
+          body += "\n";
+        } else {
+          // Add single line with > to maintain blockquote continuity
+          body += "\n>\n";
+        }
+      } else {
+        // Standard double newline between different paragraph types
+        body += "\n\n";
+      }
+    }
+
+    body += current;
+    lastWasBlockquote = isCurrentBlockquote;
+  }
   const footnotes = extractFootnotes(documentContext, doc);
 
-  const md = body + "\n\n" + footnotes;
+  let md = body + "\n\n" + footnotes;
+  // Keep cleanup: remove bare '>' lines immediately before quoted list items
+  md = md.replace(/(^|\n)>\n(?=>\s*(?:-\s|\d+\.\s))/g, "$1");
 
   // Take the maximum of each suggestion's insertions and deletions
   // This helps replacements not seem ridiculously huge
@@ -266,10 +296,34 @@ export const mergeSameElements = (elements) =>
     return acc;
   }, []);
 
-const isQuote = (paragraphStyle) => {
+// Determine whether a paragraph should be treated as a Markdown blockquote.
+// Notes about Google Docs indentation units:
+// - A single "indent button" click is ~36pt. Bulleted/numbered lists at nesting level N
+//   typically have a baseline indentation of 36pt per level (i.e. (N+1) * 36pt).
+// - We treat a paragraph as a quote when its indent exceeds the relevant baseline by a small
+//   margin. For normal paragraphs, the baseline is 0; for list items, the baseline is the
+//   list's per-level indentation.
+// Current rule:
+// - Normal paragraphs: indent >= 18pt (roughly half a button) => quote
+// - List items: indent >= (36pt * (nestingLevel + 1)) + 18pt => quote
+//   This means a level-0 list (~36pt) will only be quoted if pushed further to >= 54pt; nested
+//   list items require proportionally more. This avoids misclassifying plain list items as quotes,
+//   while still allowing intentionally over-indented list items to be quoted.
+const isQuote = (
+  paragraphStyle,
+  { isBullet = false, nestingLevel = 0 } = {}
+) => {
   const indentStart = paragraphStyle?.indentStart?.magnitude || 0;
-  const QUOTE_INDENT_THRESHOLD = 18; // Standard indentation button is 36pt, we test lower
-  return indentStart >= QUOTE_INDENT_THRESHOLD;
+  const QUOTE_INDENT_THRESHOLD = 18; // ~half a button beyond baseline
+  const BULLET_BASELINE_INDENT = 36; // Typical per-level baseline indent in GDocs
+
+  if (!isBullet) {
+    return indentStart >= QUOTE_INDENT_THRESHOLD;
+  }
+
+  // For list items, require additional indentation beyond the per-level baseline
+  const levelBaseline = BULLET_BASELINE_INDENT * (nestingLevel + 1);
+  return indentStart >= levelBaseline + QUOTE_INDENT_THRESHOLD;
 };
 
 export const parseParagraph = (documentContext) => (paragraph) => {
@@ -325,15 +379,23 @@ export const parseParagraph = (documentContext) => (paragraph) => {
     };
     itemMarker = isOrdered ? getBulletOrder(paragraph) + ". " : "- ";
     leadingSpace = new Array(nestingLevel).fill("    ").join("");
+
+    // Check if this bullet is inside a blockquote (requires extra indent beyond list baseline)
+    let quotePrefix = "";
+    if (isQuote(paragraphStyle, { isBullet: true, nestingLevel })) {
+      quotePrefix = "> ";
+    }
+
     return (
+      quotePrefix +
       leadingSpace +
       itemMarker +
       prefix +
-      md.join("").replaceAll("\n", "\n" + leadingSpace + "    ")
+      md.join("").replaceAll("\n", "\n" + quotePrefix + leadingSpace + "    ")
     );
   } else {
     let quotePrefix = "";
-    if (isQuote(paragraphStyle)) {
+    if (isQuote(paragraphStyle, { isBullet: false })) {
       quotePrefix = "> ";
     }
     return (

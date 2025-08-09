@@ -14,6 +14,7 @@ import {
   mergeSameElements,
   makeBulletOrderMap,
 } from "../parser.js";
+import { compressMarkdown } from "../utils.js";
 
 fetchMock.enableMocks();
 
@@ -561,6 +562,217 @@ describe("parseDoc", () => {
     // Verify paragraphs and lists have double newlines
     expect(result.md).toContain("Regular paragraph\n\n- First bullet");
     expect(result.md).toContain("Second bullet\n\nAnother paragraph");
+  });
+
+  it("does not insert extra blank lines inside consecutive blockquotes and preserves quoted lists", async () => {
+    const doc = {
+      body: {
+        content: [
+          {
+            paragraph: {
+              elements: [
+                {
+                  startIndex: 10,
+                  textRun: { content: "Quoted paragraph one" },
+                },
+              ],
+              paragraphStyle: {
+                namedStyleType: "NORMAL_TEXT",
+                indentStart: { magnitude: 36 },
+              },
+            },
+          },
+          // Intentional blank paragraph between two quoted paras
+          { paragraph: { elements: [{ textRun: { content: "\n" } }] } },
+          {
+            paragraph: {
+              elements: [
+                {
+                  startIndex: 20,
+                  textRun: { content: "Quoted paragraph two" },
+                },
+              ],
+              paragraphStyle: {
+                namedStyleType: "NORMAL_TEXT",
+                indentStart: { magnitude: 36 },
+              },
+            },
+          },
+          // Quoted unordered list
+          {
+            paragraph: {
+              elements: [{ startIndex: 30, textRun: { content: "Item A" } }],
+              paragraphStyle: {
+                namedStyleType: "NORMAL_TEXT",
+                // List baseline (~36) + extra indent (>=18) to be recognized as a quote
+                indentStart: { magnitude: 60 },
+              },
+              bullet: { listId: "qlist", nestingLevel: 0 },
+            },
+          },
+          {
+            paragraph: {
+              elements: [{ startIndex: 40, textRun: { content: "Item B" } }],
+              paragraphStyle: {
+                namedStyleType: "NORMAL_TEXT",
+                indentStart: { magnitude: 60 },
+              },
+              bullet: { listId: "qlist", nestingLevel: 0 },
+            },
+          },
+          // Normal paragraph after quoted list
+          {
+            paragraph: {
+              elements: [
+                { startIndex: 50, textRun: { content: "After quote" } },
+              ],
+            },
+          },
+        ],
+      },
+      lists: {
+        qlist: { listProperties: { nestingLevels: [{ glyphSymbol: "-" }] } },
+      },
+      footnotes: {},
+    };
+
+    const result = await parseDoc(doc);
+
+    // Two quoted paragraphs separated by a single ">" line
+    expect(result.md).toContain(
+      "> Quoted paragraph one\n>\n> Quoted paragraph two"
+    );
+
+    // Quoted list without extra blank lines between items
+    expect(result.md).toContain("> - Item A\n> - Item B\n\nAfter quote");
+  });
+
+  it("does not include blank lines between consecutive bullet items (plain and quoted)", async () => {
+    // Plain list
+    const docPlain = {
+      body: {
+        content: [
+          {
+            paragraph: {
+              elements: [{ startIndex: 10, textRun: { content: "A" } }],
+              bullet: { listId: "l1", nestingLevel: 0 },
+            },
+          },
+          {
+            paragraph: {
+              elements: [{ startIndex: 20, textRun: { content: "B" } }],
+              bullet: { listId: "l1", nestingLevel: 0 },
+            },
+          },
+          {
+            paragraph: {
+              elements: [{ startIndex: 30, textRun: { content: "C" } }],
+              bullet: { listId: "l1", nestingLevel: 0 },
+            },
+          },
+        ],
+      },
+      lists: {
+        l1: { listProperties: { nestingLevels: [{ glyphSymbol: "-" }] } },
+      },
+      footnotes: {},
+    };
+    const resultPlain = await parseDoc(docPlain);
+    const mdPlain = compressMarkdown(resultPlain.md);
+    // No blank line between "- A" and "- B" or between "- B" and "- C"
+    expect(mdPlain).not.toMatch(/^\- [^\n]+\n\s*\n\s*\- /m);
+
+    // Quoted list
+    const docQuoted = {
+      body: {
+        content: [
+          {
+            paragraph: {
+              elements: [{ startIndex: 110, textRun: { content: "QA" } }],
+              paragraphStyle: {
+                indentStart: { magnitude: 60 },
+                namedStyleType: "NORMAL_TEXT",
+              },
+              bullet: { listId: "ql", nestingLevel: 0 },
+            },
+          },
+          {
+            paragraph: {
+              elements: [{ startIndex: 120, textRun: { content: "QB" } }],
+              paragraphStyle: {
+                indentStart: { magnitude: 60 },
+                namedStyleType: "NORMAL_TEXT",
+              },
+              bullet: { listId: "ql", nestingLevel: 0 },
+            },
+          },
+        ],
+      },
+      lists: {
+        ql: { listProperties: { nestingLevels: [{ glyphSymbol: "-" }] } },
+      },
+      footnotes: {},
+    };
+    const resultQuoted = await parseDoc(docQuoted);
+    const mdQuoted = compressMarkdown(resultQuoted.md);
+    expect(mdQuoted).not.toMatch(/^> \- [^\n]+\n\s*\n\s*> \- /m);
+  });
+
+  it("does not quote nested bullets at typical indentation levels", async () => {
+    const level0 = {
+      paragraph: {
+        elements: [{ startIndex: 10, textRun: { content: "Level 0" } }],
+        paragraphStyle: {
+          namedStyleType: "NORMAL_TEXT",
+          indentStart: { magnitude: 36 },
+        },
+        bullet: { listId: "nest", nestingLevel: 0 },
+      },
+    };
+    const level1 = {
+      paragraph: {
+        elements: [{ startIndex: 20, textRun: { content: "Level 1" } }],
+        paragraphStyle: {
+          namedStyleType: "NORMAL_TEXT",
+          indentStart: { magnitude: 72 },
+        },
+        bullet: { listId: "nest", nestingLevel: 1 },
+      },
+    };
+    const level2 = {
+      paragraph: {
+        elements: [{ startIndex: 30, textRun: { content: "Level 2" } }],
+        paragraphStyle: {
+          namedStyleType: "NORMAL_TEXT",
+          indentStart: { magnitude: 108 },
+        },
+        bullet: { listId: "nest", nestingLevel: 2 },
+      },
+    };
+
+    const doc = {
+      body: { content: [level0, level1, level2] },
+      lists: {
+        nest: {
+          listProperties: {
+            nestingLevels: [
+              { glyphSymbol: "-" },
+              { glyphSymbol: "-" },
+              { glyphSymbol: "-" },
+            ],
+          },
+        },
+      },
+      footnotes: {},
+    };
+
+    const result = await parseDoc(doc);
+    expect(result.md).toContain("- Level 0");
+    expect(result.md).toContain("    - Level 1");
+    expect(result.md).toContain("        - Level 2");
+    expect(result.md).not.toContain("> - Level 0");
+    expect(result.md).not.toContain(">     - Level 1");
+    expect(result.md).not.toContain(">         - Level 2");
   });
 
   it("parses a document without footnotes or related answers", async () => {
