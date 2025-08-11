@@ -1,44 +1,18 @@
 import fetch from "node-fetch";
-import { tableURL, codaColumnIDs, glossaryTableURL } from "./constants.js";
 
 const pprint = (data) => console.log(JSON.stringify(data, null, 2));
 
-// Some answers are HUGE and full of youtube embeds, so we sometimes need to squash them as Coda only lets us push 85KB into their API at a time. 40K of markdown seems to become 95K over the wire, so we set our limit a good few K under that.
-// Minimal, regex-based spacing normalizer for Markdown
-// Behavior:
-// - Trim trailing spaces per line
-// - Collapse 3+ consecutive newlines to exactly 2
-// - Remove a bare '>' separator right before a quoted list item (keeps quote block tight)
-// - Remove any whitespace-only blank lines between consecutive list items
-//   (works for both quoted and plain lists, and tolerates optional indentation)
-
-// 1) Trailing spaces at EOL
 const RE_TRAILING_SPACES = /[ \t]+$/gm;
-
-// 2) 3+ newlines → 2 (global)
 const RE_3PLUS_NEWLINES = /\n{3,}/g;
-
-// 3) Bare '>' line immediately before a quoted list item (e.g., ">\n> - item")
-//    Captures start or newline, then the bare '>' line, only if followed by a quoted list item
 const RE_BARE_QUOTE_BEFORE_QUOTED_LIST = /(^|\n)>\n(?=>\s*(?:-\s|\d+\.\s))/g;
-
-// 4) Blank lines between consecutive list items (quoted or not)
-//    Left side:
-//      - Start of string or newline
-//      - Optional "> " prefixes (quoted block), optional indentation
-//      - A list marker: dash ("- ") or ordered ("\d+. ")
-//      - Then any content for that list item (non-greedy)
-//      - Followed by one-or-more blank lines (possibly spaces/tabs)
-//    Lookahead:
-//      - Optional "> " prefixes (quoted), optional indentation
-//      - Another list marker (dash or ordered)
 const RE_BLANKS_BETWEEN_ANY_LIST_ITEMS =
   /((?:^|\n)(?:>\s*)*\s*(?:-\s|\d+\.\s)[\s\S]*?)\n(?:[ \t]*\n)+(?=(?:>\s*)*\s*(?:-\s|\d+\.\s))/g;
-
-// 5) Extra safety: collapse blanks specifically between two plain dash bullets (non-quoted)
-//    This catches plain lists with an "empty" (whitespace-only) line in between
 const RE_BLANKS_BETWEEN_PLAIN_DASHES =
   /(^|\n)(-\s[^\n]+)\n(?:[ \t]*\n)+(?=-\s)/g;
+const RE_SPACING_BETWEEN_BULLET_LIST_AND_PARAGRAPH = /^(\s*-[^\n]+?\n)([^-\s])/gm;
+const RE_SPACING_BETWEEN_NUMBERED_LIST_AND_PARAGRAPH = /^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm;
+const RE_SPACING_AFTER_QUOTED_BULLET_LIST = /^(>\s*-[^\n]+?\n)(?!>)([^-\s])/gm;
+const RE_SPACING_AFTER_QUOTED_NUMBERED_LIST = /^(>\s*\d+\.[^\n]+?\n)(?!>)([^\d\s])/gm;
 
 const normalizeMarkdownSpacing = (md) => {
   return (
@@ -51,11 +25,18 @@ const normalizeMarkdownSpacing = (md) => {
       .replace(RE_BARE_QUOTE_BEFORE_QUOTED_LIST, "$1")
       // 4) Remove whitespace-only blanks between any two consecutive list items
       .replace(RE_BLANKS_BETWEEN_ANY_LIST_ITEMS, "$1\n")
-      // 5) Extra safety for plain dashes
+      // 5) Remove whitespace between plain dashes
       .replace(RE_BLANKS_BETWEEN_PLAIN_DASHES, "$1$2\n")
+      // 6) Ensure proper spacing between list items and paragraphs (non-quoted)
+      .replace(RE_SPACING_BETWEEN_BULLET_LIST_AND_PARAGRAPH, "$1\n$2")
+      .replace(RE_SPACING_BETWEEN_NUMBERED_LIST_AND_PARAGRAPH, "$1\n$2")
+      // 7) Ensure proper spacing after quoted lists before non-quote, non-list content
+      .replace(RE_SPACING_AFTER_QUOTED_BULLET_LIST, "$1\n$2")
+      .replace(RE_SPACING_AFTER_QUOTED_NUMBERED_LIST, "$1\n$2")
   );
 };
 
+// Some answers are HUGE and full of youtube embeds, so we sometimes need to squash them as Coda only lets us push 85KB into their API at a time. 40K of markdown seems to become 95K over the wire, so we set our limit a good few K under that.
 export const compressMarkdown = (md) => {
   const beforeSize = md.length;
   let currentSize = beforeSize;
@@ -75,15 +56,6 @@ export const compressMarkdown = (md) => {
 
   // Post-process with structure-aware newline normalization
   ret = normalizeMarkdownSpacing(ret);
-
-  // Ensure proper spacing between list items and paragraphs (non-quoted)
-  ret = ret.replace(/^(\s*-[^\n]+?\n)([^-\s])/gm, "$1\n$2");
-  ret = ret.replace(/^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm, "$1\n$2");
-  // Ensure proper spacing after quoted lists before non-quote, non-list content
-  ret = ret.replace(/^(>\s*-[^\n]+?\n)(?!>)([^-\s])/gm, "$1\n$2");
-  ret = ret.replace(/^(>\s*\d+\.[^\n]+?\n)(?!>)([^\d\s])/gm, "$1\n$2");
-
-  // Trailing blanks already trimmed by normalizer
 
   currentSize = ret.length;
 
