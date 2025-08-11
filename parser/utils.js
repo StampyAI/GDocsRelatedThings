@@ -9,10 +9,13 @@ const RE_BLANKS_BETWEEN_ANY_LIST_ITEMS =
   /((?:^|\n)(?:>\s*)*\s*(?:-\s|\d+\.\s)[\s\S]*?)\n(?:[ \t]*\n)+(?=(?:>\s*)*\s*(?:-\s|\d+\.\s))/g;
 const RE_BLANKS_BETWEEN_PLAIN_DASHES =
   /(^|\n)(-\s[^\n]+)\n(?:[ \t]*\n)+(?=-\s)/g;
-const RE_SPACING_BETWEEN_BULLET_LIST_AND_PARAGRAPH = /^(\s*-[^\n]+?\n)([^-\s])/gm;
-const RE_SPACING_BETWEEN_NUMBERED_LIST_AND_PARAGRAPH = /^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm;
+const RE_SPACING_BETWEEN_BULLET_LIST_AND_PARAGRAPH =
+  /^(\s*-[^\n]+?\n)([^-\s])/gm;
+const RE_SPACING_BETWEEN_NUMBERED_LIST_AND_PARAGRAPH =
+  /^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm;
 const RE_SPACING_AFTER_QUOTED_BULLET_LIST = /^(>\s*-[^\n]+?\n)(?!>)([^-\s])/gm;
-const RE_SPACING_AFTER_QUOTED_NUMBERED_LIST = /^(>\s*\d+\.[^\n]+?\n)(?!>)([^\d\s])/gm;
+const RE_SPACING_AFTER_QUOTED_NUMBERED_LIST =
+  /^(>\s*\d+\.[^\n]+?\n)(?!>)([^\d\s])/gm;
 
 const normalizeMarkdownSpacing = (md) => {
   return (
