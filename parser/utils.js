@@ -1,7 +1,43 @@
 import fetch from "node-fetch";
-import { tableURL, codaColumnIDs, glossaryTableURL } from "./constants.js";
 
 const pprint = (data) => console.log(JSON.stringify(data, null, 2));
+
+const RE_TRAILING_SPACES = /[ \t]+$/gm;
+const RE_3PLUS_NEWLINES = /\n{3,}/g;
+const RE_BARE_QUOTE_BEFORE_QUOTED_LIST = /(^|\n)>\n(?=>\s*(?:-\s|\d+\.\s))/g;
+const RE_BLANKS_BETWEEN_ANY_LIST_ITEMS =
+  /((?:^|\n)(?:>\s*)*\s*(?:-\s|\d+\.\s)[\s\S]*?)\n(?:[ \t]*\n)+(?=(?:>\s*)*\s*(?:-\s|\d+\.\s))/g;
+const RE_BLANKS_BETWEEN_PLAIN_DASHES =
+  /(^|\n)(-\s[^\n]+)\n(?:[ \t]*\n)+(?=-\s)/g;
+const RE_SPACING_BETWEEN_BULLET_LIST_AND_PARAGRAPH =
+  /^(\s*-[^\n]+?\n)([^-\s])/gm;
+const RE_SPACING_BETWEEN_NUMBERED_LIST_AND_PARAGRAPH =
+  /^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm;
+const RE_SPACING_AFTER_QUOTED_BULLET_LIST = /^(>\s*-[^\n]+?\n)(?!>)([^-\s])/gm;
+const RE_SPACING_AFTER_QUOTED_NUMBERED_LIST =
+  /^(>\s*\d+\.[^\n]+?\n)(?!>)([^\d\s])/gm;
+
+const normalizeMarkdownSpacing = (md) => {
+  return (
+    md
+      // 1) Trim trailing spaces
+      .replace(RE_TRAILING_SPACES, "")
+      // 2) Collapse 3+ newlines → exactly 2
+      .replace(RE_3PLUS_NEWLINES, "\n\n")
+      // 3) Remove bare '>' line directly before a quoted list item
+      .replace(RE_BARE_QUOTE_BEFORE_QUOTED_LIST, "$1")
+      // 4) Remove whitespace-only blanks between any two consecutive list items
+      .replace(RE_BLANKS_BETWEEN_ANY_LIST_ITEMS, "$1\n")
+      // 5) Remove whitespace between plain dashes
+      .replace(RE_BLANKS_BETWEEN_PLAIN_DASHES, "$1$2\n")
+      // 6) Ensure proper spacing between list items and paragraphs (non-quoted)
+      .replace(RE_SPACING_BETWEEN_BULLET_LIST_AND_PARAGRAPH, "$1\n$2")
+      .replace(RE_SPACING_BETWEEN_NUMBERED_LIST_AND_PARAGRAPH, "$1\n$2")
+      // 7) Ensure proper spacing after quoted lists before non-quote, non-list content
+      .replace(RE_SPACING_AFTER_QUOTED_BULLET_LIST, "$1\n$2")
+      .replace(RE_SPACING_AFTER_QUOTED_NUMBERED_LIST, "$1\n$2")
+  );
+};
 
 // Some answers are HUGE and full of youtube embeds, so we sometimes need to squash them as Coda only lets us push 85KB into their API at a time. 40K of markdown seems to become 95K over the wire, so we set our limit a good few K under that.
 export const compressMarkdown = (md) => {
@@ -21,23 +57,8 @@ export const compressMarkdown = (md) => {
   // First step: Remove all trailing whitespace from lines
   ret = ret.replace(/[ \t]+$/gm, "");
 
-  // Post-process to ensure no consecutive empty lines (fixes display issues)
-  ret = ret.replace(/\n{2,}/g, "\n\n");
-
-  // Fix unordered list spacing - normalize all items to single lines
-  // This pattern handles any number of consecutive bullet points with any amount of spacing between them
-  ret = ret.replace(/^(\s*-[^\n]+\n)(?:\s*\n)*(?=\s*-)/gm, "$1");
-
-  // Fix ordered list spacing - normalize all items to single lines
-  // Similar pattern for numbered lists
-  ret = ret.replace(/^(\s*\d+\.[^\n]+\n)(?:\s*\n)*(?=\s*\d+\.)/gm, "$1");
-
-  // Ensure proper spacing between list items and paragraphs
-  ret = ret.replace(/^(\s*-[^\n]+?\n)([^-\s])/gm, "$1\n$2");
-  ret = ret.replace(/^(\s*\d+\.[^\n]+?\n)([^\d\s])/gm, "$1\n$2");
-
-  // Ensure no trailing newlines
-  ret = ret.replace(/\n+$/, "");
+  // Post-process with structure-aware newline normalization
+  ret = normalizeMarkdownSpacing(ret);
 
   currentSize = ret.length;
 
