@@ -1,4 +1,4 @@
-import { setTimeout } from "timers/promises";
+
 import { decode } from "html-entities";
 import {
   codaDelete,
@@ -59,7 +59,9 @@ const setGlossary = async (metadata) => {
 
     if (res.status === 429) {
       // Rate limit hit, throw error to trigger retry with exponential backoff
-      throw new Error("Rate limit exceeded (429)");
+      const error = new Error("Rate limit exceeded (429)");
+      error.status = 429;
+      throw error;
     }
     if (res.status === 502) {
       // A lot of these get returned, but they're not really a problem on this side, so just ignore them
@@ -296,12 +298,12 @@ async function main() {
 
       try {
         // Add a delay between API operations to avoid rate limiting
-        await setTimeout(OPERATION_SPACING_MS);
+        await new Promise(resolve => setTimeout(resolve, OPERATION_SPACING_MS));
 
         // Process the item with our central withRetry utility
         const result = await withRetry(
           async () => func(item),
-          `Update glossary for "${item.row?.term || "unknown"}"`
+          `Update glossary for "${(item.row?.term || "unknown").trim()}"`
         );
 
         return [...previousResults, result];
