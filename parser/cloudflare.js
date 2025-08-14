@@ -2,19 +2,33 @@ import { randomUUID } from "crypto";
 import { withRetry } from "./utils.js";
 
 const sendRequest = (endpoint, method, body) =>
-  withRetry(async () => {
-    const response = await fetch(
-      `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/images/${endpoint}`,
-      {
-        method,
-        headers: {
-          Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
-        },
-        body,
+  withRetry(
+    async () => {
+      const response = await fetch(
+        `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/images/${endpoint}`,
+        {
+          method,
+          headers: {
+            Authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`,
+          },
+          body,
+        }
+      );
+
+      if (!response.ok) {
+        const error = new Error(`Cloudflare API error: ${response.statusText}`);
+        error.status = response.status;
+        throw error;
       }
-    );
-    return response.json();
-  }, `Cloudflare API ${method} to /images/${endpoint.split("?")[0]}`);
+
+      return response.json();
+    },
+    `Cloudflare API ${method} to /images/${endpoint.split("?")[0]}`,
+    {
+      maxRetries: 5,
+      baseDelayMs: 5000,
+    }
+  );
 
 const uploadImage = async (url, metadata) => {
   const formData = new FormData();

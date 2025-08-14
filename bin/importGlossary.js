@@ -1,4 +1,3 @@
-
 import { decode } from "html-entities";
 import {
   codaDelete,
@@ -298,7 +297,9 @@ async function main() {
 
       try {
         // Add a delay between API operations to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, OPERATION_SPACING_MS));
+        await new Promise((resolve) =>
+          setTimeout(resolve, OPERATION_SPACING_MS)
+        );
 
         // Process the item with our central withRetry utility
         const result = await withRetry(
