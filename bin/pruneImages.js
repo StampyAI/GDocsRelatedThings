@@ -1,5 +1,5 @@
 import parse from "../parser/main.js";
-import { logError } from "../parser/utils.js";
+import { logError, withRetry } from "../parser/utils.js";
 import { questionImages, deleteImage } from "../parser/cloudflare.js";
 
 const deleteOldVersions = ([uiid, versions]) =>
@@ -8,10 +8,17 @@ const deleteOldVersions = ([uiid, versions]) =>
     .slice(1)
     .map((imgs) => imgs.map(({ id }) => id))
     .flat()
-    .map(deleteImage);
+    .map(async (id) => {
+      try {
+        return await withRetry(() => deleteImage(id), `Delete image ${id}`);
+      } catch (error) {
+        console.error(`Failed to delete image ${id}: ${error.message}`);
+        throw error;
+      }
+    });
 
 try {
-  const questions = await questionImages();
+  const questions = await withRetry(questionImages, "Fetch question images");
   const responses = await Promise.all(
     Object.entries(questions).map(deleteOldVersions).flat()
   );

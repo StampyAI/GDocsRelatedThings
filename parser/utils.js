@@ -170,6 +170,12 @@ export const withRetry = async (fn, operationName, options = {}) => {
       return true;
     }
 
+    // Check for network errors
+    if (error.message?.includes("fetch failed")) {
+      console.log("Detected network error - will retry");
+      return true;
+    }
+
     return false;
   };
 
