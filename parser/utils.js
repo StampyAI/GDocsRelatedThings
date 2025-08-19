@@ -156,7 +156,11 @@ export const withRetry = async (fn, operationName, options = {}) => {
 
     if (status) {
       return (
-        status === 429 || status === 502 || status === 503 || status === 504
+        status === 429 ||
+        status === 424 ||
+        status === 502 ||
+        status === 503 ||
+        status === 504
       );
     }
 
