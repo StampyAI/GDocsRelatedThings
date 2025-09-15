@@ -13,6 +13,7 @@ import {
   parseElement,
   mergeSameElements,
   makeBulletOrderMap,
+  tableParser,
 } from "../parser.js";
 import { compressMarkdown } from "../utils.js";
 
@@ -1199,5 +1200,290 @@ describe("mergeSameElements", () => {
       makeElement("Bla bla ", "http://bla.com"),
       makeElement("bla"),
     ]);
+  });
+});
+
+describe("tableParser", () => {
+  it("should convert a table with headers and data to markdown format", () => {
+    const context = { documentContext: {} };
+    const parser = tableParser(context);
+
+    const table = {
+      tableRows: [
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 1" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 2" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 3" } }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 1 Col 1" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 1 Col 2" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 1 Col 3" } }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 2 Col 1" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 2 Col 2" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 2 Col 3" } }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = parser(table);
+
+    // Check that it returns a markdown table format
+    expect(result).toContain("| Header 1");
+    expect(result).toContain("| Header 2");
+    expect(result).toContain("| Header 3");
+    expect(result).toContain("| -----------"); // Should have separator line
+    expect(result).toContain("| Row 1 Col 1");
+    expect(result).toContain("| Row 2 Col 1");
+  });
+
+  it("should handle empty tables", () => {
+    const context = { documentContext: {} };
+    const parser = tableParser(context);
+
+    const emptyTable = { tableRows: [] };
+    const result = parser(emptyTable);
+
+    expect(result).toBe("");
+  });
+
+  it("should handle tables with formatted text", () => {
+    const context = { documentContext: {} };
+    const parser = tableParser(context);
+
+    const table = {
+      tableRows: [
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [
+                      {
+                        textRun: {
+                          content: "Bold Header",
+                          textStyle: { bold: true },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [
+                      {
+                        textRun: {
+                          content: "Italic Header",
+                          textStyle: { italic: true },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Regular text" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [
+                      {
+                        textRun: {
+                          content: "Link text",
+                          textStyle: { link: { url: "https://example.com" } },
+                        },
+                      },
+                    ],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = parser(table);
+
+    expect(result).toContain("**Bold Header**");
+    expect(result).toContain("*Italic Header*");
+    expect(result).toContain("[Link text](https://example.com)");
+  });
+
+  it("should reject tables with inconsistent column counts", () => {
+    const context = { documentContext: {} };
+    const parser = tableParser(context);
+    const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
+
+    const table = {
+      tableRows: [
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 1" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 2" } }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Row 1 Col 1" } }],
+                  },
+                },
+              ],
+            },
+            // Missing second column
+          ],
+        },
+      ],
+    };
+
+    const result = parser(table);
+
+    expect(result).toBe("");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Warning: Table has inconsistent column counts")
+    );
+
+    consoleSpy.mockRestore();
+  });
+
+  it("should reject tables with no columns", () => {
+    const context = { documentContext: {} };
+    const parser = tableParser(context);
+    const consoleSpy = jest.spyOn(console, "warn").mockImplementation();
+
+    const table = {
+      tableRows: [
+        {
+          tableCells: [], // No columns
+        },
+      ],
+    };
+
+    const result = parser(table);
+
+    expect(result).toBe("");
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Warning: Table has no columns")
+    );
+
+    consoleSpy.mockRestore();
   });
 });

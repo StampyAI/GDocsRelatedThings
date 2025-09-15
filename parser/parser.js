@@ -1,4 +1,5 @@
 import escapeHtml from "escape-html";
+import { markdownTable } from "markdown-table";
 
 // Extract the whole contents of a paragraph block as a single string
 const extractBlockText = (block) =>
@@ -78,6 +79,9 @@ const extractDocParts = (doc) => {
 
   return {
     paragraphs: extractAllParagraphs(blocks.content),
+    elements: blocks.content.filter(
+      (block) => "paragraph" in block || "table" in block
+    ),
     relatedAnswerDocIDs: extractRelatedAnswerIDs(blocks.related),
     alternativePhrasings: blocks.alternatives
       .map(extractBlockText)
@@ -86,7 +90,7 @@ const extractDocParts = (doc) => {
 };
 
 export const parseDoc = async (doc, answer) => {
-  const { paragraphs, relatedAnswerDocIDs, alternativePhrasings, glossary } =
+  const { paragraphs, elements, relatedAnswerDocIDs, alternativePhrasings } =
     extractDocParts(doc);
 
   // contextual information about the doc that is sometimes useful
@@ -110,17 +114,26 @@ export const parseDoc = async (doc, answer) => {
     };
   }
 
-  // Process paragraphs and join with double newlines for spacing
-  const processedParagraphs = paragraphs
-    .map(parseParagraph(documentContext))
+  // Process elements (paragraphs and tables) and join with double newlines for spacing
+  const processedElements = elements
+    .map((element) => {
+      // Handle different element types
+      if (element.paragraph) {
+        return parseParagraph(documentContext)(element.paragraph);
+      } else if (element.table) {
+        return parseElement(documentContext)(element);
+      } else {
+        return ""; // Silently ignore unknown element types
+      }
+    })
     .filter(Boolean);
 
   // Join paragraphs with special handling for consecutive blockquotes
   let body = "";
   let lastWasBlockquote = false;
 
-  for (let i = 0; i < processedParagraphs.length; i++) {
-    const current = processedParagraphs[i];
+  for (let i = 0; i < processedElements.length; i++) {
+    const current = processedElements[i];
     const isCurrentBlockquote = current.startsWith(">");
     const isEmptyBlockquote = current.trim() === ">";
 
@@ -580,16 +593,37 @@ export const tableParser = (context) => {
   const paragraphParser = parseParagraph(context);
   const extractRow = ({ tableCells }) =>
     tableCells.map(({ content }) =>
-      extractAllParagraphs(content).map(paragraphParser).join("\n")
+      extractAllParagraphs(content).map(paragraphParser).join("\n").trim()
     );
 
   return ({ tableRows }) => {
-    const rawRows = tableRows.map(extractRow);
-    const header = rawRows[0].map((i) => i.toLowerCase().trim());
+    if (!tableRows || tableRows.length === 0) {
+      return "";
+    }
 
-    return rawRows
-      .slice(1)
-      .map((row) => Object.fromEntries(row.map((val, i) => [header[i], val])));
+    const rawRows = tableRows.map(extractRow);
+
+    // Validate table structure - reject malformed tables
+    const firstRowColCount = rawRows[0].length;
+    if (firstRowColCount === 0) {
+      console.warn("Warning: Table has no columns - skipping");
+      return "";
+    }
+
+    const inconsistentRows = rawRows.filter(
+      (row) => row.length !== firstRowColCount
+    );
+    if (inconsistentRows.length > 0) {
+      console.warn(
+        `Warning: Table has inconsistent column counts (expected ${firstRowColCount}, found rows with ${inconsistentRows
+          .map((r) => r.length)
+          .join(", ")} columns) - skipping`
+      );
+      return "";
+    }
+
+    // Use markdown-table to generate properly formatted markdown table
+    return markdownTable(rawRows);
   };
 };
 
