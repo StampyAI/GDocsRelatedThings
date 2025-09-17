@@ -227,12 +227,15 @@ export const fetchExternalContent = async (paragraphs) => {
 };
 
 const LWGraphQLQuery = async (host, query) => {
-  const result = await fetch(encodeURI(`${host}/graphql?query=${query}`), {
+  const result = await fetch(`${host}/graphql`, {
+    method: "POST",
     timeout: 5000,
     headers: {
       "Content-Type": "application/json",
-      "x-apollo-operation-name": "GetTag",
+      Accept: "application/json",
+      "User-Agent": "The AISafety.info bot, used to import tags",
     },
+    body: JSON.stringify({ query }),
   });
   return await result.json();
 };
