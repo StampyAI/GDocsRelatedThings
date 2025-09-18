@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 import { withRetry } from "./utils.js";
+import imageSize from "image-size";
 
 const sendRequest = (endpoint, method, body) =>
   withRetry(
@@ -30,6 +31,25 @@ const sendRequest = (endpoint, method, body) =>
     }
   );
 
+const getImageDimensions = async (url) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch image for dimensions: ${response.statusText}`
+      );
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const dimensions = imageSize(buffer);
+    return { width: dimensions.width, height: dimensions.height };
+  } catch (error) {
+    console.warn(`Error getting image dimensions for ${url}:`, error.message);
+    return null;
+  }
+};
+
 const uploadImage = async (url, metadata) => {
   const formData = new FormData();
   formData.append("url", url);
@@ -42,19 +62,37 @@ const uploadImage = async (url, metadata) => {
 };
 
 export const replaceImages = async (objects, uiid) => {
-  if (!process.env.CLOUDFLARE_ACCOUNT_ID) return null;
+  if (!process.env.CLOUDFLARE_ACCOUNT_ID) return {};
 
   const fingerprint = randomUUID();
+  const imageDimensions = {};
+
   const updates = Object.entries(objects || {}).map(async ([key, obj]) => {
     const img = obj?.inlineObjectProperties?.embeddedObject;
     if (img) {
-      img.imageProperties.contentUri = await uploadImage(
-        img.imageProperties.contentUri,
-        { title: img.title, UIID: uiid, fingerprint }
-      );
+      const originalUri = img.imageProperties.contentUri;
+
+      // Get dimensions before uploading
+      const dimensions = await getImageDimensions(originalUri);
+
+      // Upload to Cloudflare
+      const newUri = await uploadImage(originalUri, {
+        title: img.title,
+        UIID: uiid,
+        fingerprint,
+      });
+
+      img.imageProperties.contentUri = newUri;
+
+      // Store dimensions mapped by the final URI
+      if (dimensions && newUri) {
+        imageDimensions[newUri] = dimensions;
+      }
     }
   });
+
   await Promise.all(updates);
+  return imageDimensions;
 };
 
 export const questionImages = async () => {
