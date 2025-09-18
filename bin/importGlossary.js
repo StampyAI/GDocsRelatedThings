@@ -5,7 +5,6 @@ import {
   getGlossary,
   updateGlossary,
 } from "../parser/coda.js";
-import { parseElement } from "../parser/parser.js";
 import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
 import { logError, withRetry } from "../parser/utils.js";
@@ -132,11 +131,6 @@ async function main() {
   const gdocsClient = await getDocsClient();
   const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
   await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
-  const documentContext = {
-    footnotes: doc.footnotes || {},
-    namedStyles: doc.namedStyles,
-    inlineObjects: doc.inlineObjects,
-  };
 
   const table = doc.body.content.filter(({ table }) => table)[0];
 
@@ -151,10 +145,26 @@ async function main() {
       Object.entries(row).map(([k, v]) => [k.replaceAll("*", ""), v])
     );
 
-  // Parse rows from Google Doc
-  const rows = parseElement(documentContext)(table)
+  // Parse rows from Google Doc (skip header row)
+  const rows = table.table.tableRows
+    .slice(1)
+    .map((row) => {
+      const getValue = (cell) =>
+        cell.content?.[0]?.paragraph?.elements
+          ?.map((el) => el.textRun?.content || "")
+          .join("") || "";
+
+      return {
+        term: getValue(row.tableCells[0]),
+        definition: getValue(row.tableCells[1]),
+        question: getValue(row.tableCells[2]),
+        aliases: getValue(row.tableCells[3]),
+      };
+    })
     .map(stripFormatting)
-    .filter((row) => Boolean(row.term.trim()) && Boolean(row.definition.trim()))
+    .filter(
+      (row) => Boolean(row.term?.trim()) && Boolean(row.definition?.trim())
+    )
     .map((row) => ({
       ...row,
       answer: getAnswer(row),
