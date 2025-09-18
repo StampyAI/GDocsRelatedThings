@@ -156,9 +156,10 @@ async function main() {
 
       return {
         term: getValue(row.tableCells[0]),
-        definition: getValue(row.tableCells[1]),
+        aliases: getValue(row.tableCells[1]),
         question: getValue(row.tableCells[2]),
-        aliases: getValue(row.tableCells[3]),
+        definition: getValue(row.tableCells[3]),
+        image: getValue(row.tableCells[4]),
       };
     })
     .map(stripFormatting)
