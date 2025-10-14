@@ -33,6 +33,7 @@ const makeLink = (uri) => ({
 describe("getTag", () => {
   beforeEach(() => {
     fetchMock.resetMocks();
+    process.env.LW_GRAPHQL_ACCESS = "test-header:test-value";
   });
 
   it("Footnotes are handled correctly", async () => {
@@ -504,6 +505,7 @@ describe("parseParagraph", () => {
 describe("parseDoc", () => {
   beforeEach(() => {
     fetchMock.resetMocks();
+    process.env.LW_GRAPHQL_ACCESS = "test-header:test-value";
   });
 
   it("ensures proper spacing between paragraphs and list items", async () => {
@@ -1038,6 +1040,7 @@ describe("parseDoc", () => {
 describe("fetchExternalContent", () => {
   beforeEach(() => {
     fetchMock.resetMocks();
+    process.env.LW_GRAPHQL_ACCESS = "test-header:test-value";
   });
 
   const mockResponse = {
