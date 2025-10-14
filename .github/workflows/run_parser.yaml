@@ -23,6 +23,7 @@ env:
   DISCORD_FEED: ${{ secrets.DISCORD_FEED }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  LW_GRAPHQL_ACCESS: ${{ secrets.LW_GRAPHQL_ACCESS }}
 
 jobs:
   run-parser:

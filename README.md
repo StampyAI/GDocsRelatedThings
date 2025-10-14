@@ -52,6 +52,12 @@ These are totally optional. If not provided, any logging to Discord will be skip
 - `DISCORD_ERROR` - a secret webhook for a channel to which errors should be logged
 - `DISCORD_FEED` - a secret webhook for a channel to which questions with hanging comments should be logged
 
+### LessWrong GraphQL API
+
+Required for importing content from LessWrong tags.
+
+- `LW_GRAPHQL_ACCESS` - authentication header for LessWrong GraphQL API in format `headerName:headerValue`. Ask on the Discord to get it.
+
 # Running
 
 `node bin/importContent.js`
