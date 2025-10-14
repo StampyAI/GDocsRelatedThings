@@ -227,14 +227,24 @@ export const fetchExternalContent = async (paragraphs) => {
 };
 
 const LWGraphQLQuery = async (host, query) => {
+  if (!process.env.LW_GRAPHQL_ACCESS) {
+    throw new Error("LW_GRAPHQL_ACCESS environment variable is required.");
+  }
+
+  const headers = {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+    "User-Agent": "The AISafety.info bot, used to import tags",
+  };
+
+  // Add LessWrong bot-bypass header
+  const [headerName, headerValue] = process.env.LW_GRAPHQL_ACCESS.split(":");
+  headers[headerName.trim()] = headerValue.trim();
+
   const result = await fetch(`${host}/graphql`, {
     method: "POST",
     timeout: 5000,
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-      "User-Agent": "The AISafety.info bot, used to import tags",
-    },
+    headers,
     body: JSON.stringify({ query }),
   });
   return await result.json();
