@@ -605,9 +605,19 @@ export const parsehorizontalRule = () => {
 export const tableParser = (context) => {
   const paragraphParser = parseParagraph(context);
   const extractRow = ({ tableCells }) =>
-    tableCells.map(({ content }) =>
-      extractAllParagraphs(content).map(paragraphParser).join("\n").trim()
-    );
+    tableCells.map(({ content }) => {
+      const cellContent = extractAllParagraphs(content)
+        .map(paragraphParser)
+        .join("\n")
+        .trim();
+
+      // Convert markdown lists to unicode bullets for better rendering in tables
+      return cellContent
+        .replace(/^(\s*)- /gm, "$1• ") // Unordered lists: "- Item" or "  - Item" -> "• Item" or "  • Item"
+        .replace(/^(\s*)\d+\. /gm, "$1• ") // Ordered lists: "1. Item" or "  1. Item" -> "• Item" or "  • Item"
+        .replace(/\n/g, "<br>") // Replace all remaining newlines with <br> to keep content in table cell
+        .replace(/(<br>\s*)+/g, "<br>"); // Clean up extra whitespace around <br> tags to avoid excessive vertical spacing
+    });
 
   return ({ tableRows }) => {
     if (!tableRows || tableRows.length === 0) {

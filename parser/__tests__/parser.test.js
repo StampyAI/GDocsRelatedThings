@@ -1489,4 +1489,78 @@ describe("tableParser", () => {
 
     consoleSpy.mockRestore();
   });
+
+  it("should convert bullet lists to unicode bullets in table cells", () => {
+    const bullet1 = {
+      elements: [{ startIndex: 1, textRun: { content: "First item" } }],
+      bullet: { listId: "list-id", nestingLevel: 0 },
+    };
+    const bullet2 = {
+      elements: [{ startIndex: 2, textRun: { content: "Second item" } }],
+      bullet: { listId: "list-id", nestingLevel: 0 },
+    };
+
+    const context = {
+      lists: {
+        "list-id": {
+          listProperties: {
+            nestingLevels: [{ glyphSymbol: "•" }],
+          },
+        },
+      },
+      getBulletOrderNumber: makeBulletOrderMap([bullet1, bullet2]),
+    };
+    const parser = tableParser(context);
+
+    const table = {
+      tableRows: [
+        {
+          tableCells: [
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 1" } }],
+                  },
+                },
+              ],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Header 2" } }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+        {
+          tableCells: [
+            {
+              content: [{ paragraph: bullet1 }, { paragraph: bullet2 }],
+            },
+            {
+              content: [
+                {
+                  paragraph: {
+                    elements: [{ textRun: { content: "Single paragraph" } }],
+                  },
+                },
+              ],
+            },
+          ],
+        },
+      ],
+    };
+
+    const result = parser(table);
+
+    // Check that markdown lists are converted to unicode bullets with <br> separators
+    expect(result).toContain("• First item<br>• Second item");
+    // Check that the table structure is preserved
+    expect(result).toContain("| Header 1");
+    expect(result).toContain("| Header 2");
+  });
 });
