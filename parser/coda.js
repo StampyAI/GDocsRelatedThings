@@ -211,9 +211,25 @@ export const updateGlossary = async (
   questionUIId,
   md,
   aliases,
-  image
-) =>
-  codaUpsert(
+  image,
+  imageDimensions
+) => {
+  // Require image dimensions if image is provided
+  let imageData = undefined;
+  if (image) {
+    if (!imageDimensions) {
+      throw new Error(
+        `Image dimensions required for glossary entry: ${glossaryWord}`
+      );
+    }
+    imageData = JSON.stringify({
+      url: image,
+      width: imageDimensions.width,
+      height: imageDimensions.height,
+    });
+  }
+
+  return codaUpsert(
     `${glossaryTableURL}/rows/`,
     {
       glossaryWord,
@@ -222,7 +238,8 @@ export const updateGlossary = async (
       glossaryRichText: md,
       glossaryAliases: aliases,
       glossaryLastIngested: new Date().toISOString(),
-      glossaryImage: image || undefined,
+      glossaryImage: imageData,
     },
     ["glossaryWord"]
   );
+};
