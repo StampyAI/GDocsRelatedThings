@@ -60,7 +60,25 @@ Required for importing content from LessWrong tags.
 
 # Running
 
+## Import All Modified Documents
+
 `node bin/importContent.js`
+
+This will process all documents that have been modified since their last import. To force processing of all documents regardless of modification time, use:
+
+`PARSE_ALL=1 node bin/importContent.js`
+
+## Import a Single Document
+
+`node bin/importSingle.js <google-doc-id>`
+
+This is useful for quickly regenerating the markdown for a single document and uploading it to Coda, without having to wait for the full import process.
+
+Example:
+
+```bash
+node bin/importSingle.js 1wmTcYVZ-LTFykOsY-NFHJkxF-8KmFIzbFcknLfVDrzI
+```
 
 # Dev Testing Scripts
 

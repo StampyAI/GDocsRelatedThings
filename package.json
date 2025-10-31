@@ -5,7 +5,8 @@
   "main": "bin/importContent.js",
   "type": "module",
   "bin": {
-    "importContent": "bin/importContent.js"
+    "importContent": "bin/importContent.js",
+    "importSingle": "bin/importSingle.js"
   },
   "scripts": {
     "prettier": "prettier --check --ignore-path .gitignore \"**/*.{ts*,js,css}\"",

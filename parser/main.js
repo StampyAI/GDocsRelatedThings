@@ -164,7 +164,7 @@ export const replaceGdocLinks = (md, allAnswers) =>
     );
   }, md);
 
-const makeAnswerProcessor =
+export const makeAnswerProcessor =
   (allAnswers, gdocsClient, gdriveClient) => async (answer) => {
     console.info(`-> ${answer.answerName}`);
     const doc = await getGoogleDoc(answer, gdocsClient);
