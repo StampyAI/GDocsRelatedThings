@@ -61,16 +61,14 @@ export const getGoogleDoc = async (answer, docs) => {
           answer
         );
       } else if (err?.response?.status == 429) {
-        // Throw rate limit errors to trigger retry
         logError(
           `${err?.response.statusText} while fetching doc ${answer.docID}`,
           answer
         );
-        throw err;
       } else {
         logError(err, answer);
       }
-      throw err; // Re-throw to ensure retry mechanism works
+      throw err;
     }
   }, `Google Docs API get document ${answer.docID}`);
 };
@@ -96,16 +94,14 @@ export const getGoogleDocComments = async (answer, drive) => {
           answer
         );
       } else if (err?.response?.status == 429) {
-        // Throw rate limit errors to trigger retry
         logError(
           `${err?.response.statusText} while fetching comments of doc ${answer.docID}`,
           answer
         );
-        throw err;
       } else {
         logError(err, answer);
       }
-      throw err; // Re-throw to ensure retry mechanism works
+      throw err;
     }
   }, `Google Drive API get comments for ${answer.docID}`);
 };

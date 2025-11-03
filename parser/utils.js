@@ -149,38 +149,25 @@ export const withRetry = async (fn, operationName, options = {}) => {
   const maxRetries = options.maxRetries || MAX_RETRIES;
   const baseDelayMs = options.baseDelayMs || BASE_RETRY_DELAY_MS;
 
-  // Default retryable error check - handle both status codes and content type errors
+  // Default retryable error check - retry all errors except known permanent client errors
   const defaultIsRetryable = (error) => {
-    // Get status code from either source (Google API or Coda API format)
+    // Get status code from error object (different APIs use different formats)
     const status = error?.response?.status || error?.status;
 
     if (status) {
-      return (
-        status === 429 ||
-        status === 424 ||
-        status === 502 ||
-        status === 503 ||
-        status === 504
-      );
+      // Don't retry permanent client errors - these won't succeed on retry
+      const permanentErrors = [
+        401, // Unauthorized - invalid/expired auth token
+        404, // Not Found - resource doesn't exist
+      ];
+
+      if (permanentErrors.includes(status)) {
+        return false;
+      }
     }
 
-    // Check for content type mismatch errors (HTML instead of JSON)
-    if (
-      error instanceof SyntaxError &&
-      (error.message.includes("Unexpected token") ||
-        error.message.includes("non-JSON response"))
-    ) {
-      console.log("Detected HTML response instead of JSON - will retry");
-      return true;
-    }
-
-    // Check for network errors
-    if (error.message?.includes("fetch failed")) {
-      console.log("Detected network error - will retry");
-      return true;
-    }
-
-    return false;
+    // Retry all other errors (server errors, timeouts, rate limits, network issues, etc.)
+    return true;
   };
 
   const isRetryable = options.isRetryable || defaultIsRetryable;

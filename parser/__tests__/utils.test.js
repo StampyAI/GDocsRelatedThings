@@ -1,4 +1,59 @@
-import { compressMarkdown } from "../utils.js";
+import { compressMarkdown, withRetry } from "../utils.js";
+
+describe("withRetry", () => {
+  it("retries transient errors and eventually throws", async () => {
+    let attempts = 0;
+    const fn = async () => {
+      attempts++;
+      const error = new Error("Server Error");
+      error.status = 500; // Transient error that should be retried
+      throw error;
+    };
+
+    await expect(
+      withRetry(fn, "test operation", { maxRetries: 2, baseDelayMs: 10 })
+    ).rejects.toThrow("Server Error");
+
+    expect(attempts).toBe(2); // Should attempt maxRetries times
+  });
+
+  it("does not retry permanent errors", async () => {
+    let attempts = 0;
+    const fn = async () => {
+      attempts++;
+      const error = new Error("Not Found");
+      error.status = 404; // Permanent error that should not be retried
+      throw error;
+    };
+
+    await expect(
+      withRetry(fn, "test operation", { maxRetries: 2, baseDelayMs: 10 })
+    ).rejects.toThrow("Not Found");
+
+    expect(attempts).toBe(1); // Should only attempt once
+  });
+
+  it("succeeds on retry after transient error", async () => {
+    let attempts = 0;
+    const fn = async () => {
+      attempts++;
+      if (attempts === 1) {
+        const error = new Error("Server Error");
+        error.status = 500;
+        throw error;
+      }
+      return "success";
+    };
+
+    const result = await withRetry(fn, "test operation", {
+      maxRetries: 2,
+      baseDelayMs: 10,
+    });
+
+    expect(result).toBe("success");
+    expect(attempts).toBe(2); // Failed once, succeeded on retry
+  });
+});
 
 describe("normalizeMarkdownSpacing", () => {
   describe("trailing space removal", () => {

@@ -200,7 +200,7 @@ describe("updateAnswer", () => {
     ]);
   });
 
-  it("throws an error if fetch fails", async () => {
+  it("throws an error if fetch fails with a permanent error", async () => {
     const id = 123;
     const md = "Updated answer";
     const relatedAnswerNames = ["Answer 1", "Answer 2"];
@@ -208,7 +208,9 @@ describe("updateAnswer", () => {
     const suggestionSize = 10;
     const alternativePhrasings = ["this is a different way", "as is this"];
 
-    const expectedError = new Error("Failed to update answer");
+    // Mock a 401 error which won't be retried (permanent error)
+    const expectedError = new Error("Unauthorized");
+    expectedError.status = 401;
 
     fetch.mockRejectOnce(expectedError);
 
