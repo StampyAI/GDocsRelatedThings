@@ -9,6 +9,7 @@ import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
 import { logError, withRetry } from "../parser/utils.js";
 import { replaceImages } from "../parser/cloudflare.js";
+import imageSize from "image-size";
 
 // --------------------------------------------------------------------------
 // Configuration and Utilities
@@ -20,6 +21,30 @@ const updateImages = args.includes("--update-images");
 
 // Configuration constant
 const OPERATION_SPACING_MS = 1000; // Delay between operations (1 second)
+
+/**
+ * Fetches image dimensions from a URL
+ * @param {string} url - Image URL
+ * @returns {Promise<{width: number, height: number} | null>} - Image dimensions or null
+ */
+const getImageDimensions = async (url) => {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      console.warn(
+        `Failed to fetch image: ${response.status} ${response.statusText}`
+      );
+      return null;
+    }
+
+    const buffer = Buffer.from(await response.arrayBuffer());
+    const dimensions = imageSize(buffer);
+    return { width: dimensions.width, height: dimensions.height };
+  } catch (error) {
+    console.warn(`Error getting image dimensions for ${url}:`, error.message);
+    return null;
+  }
+};
 
 /**
  * Updates a glossary entry in Coda
@@ -142,18 +167,15 @@ async function main() {
   const gdocsClient = await getDocsClient();
   const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
 
-  console.log(
-    `Found ${
-      Object.keys(doc.inlineObjects || {}).length
-    } inline objects in document`
-  );
+  // Upload any new/changed images to Cloudflare (updates doc.inlineObjects in place)
+  if (updateImages) {
+    await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
+  }
 
-  const imageDimensions = await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
   const documentContext = {
     footnotes: doc.footnotes || {},
     namedStyles: doc.namedStyles,
     inlineObjects: doc.inlineObjects,
-    imageDimensions,
   };
 
   const table = doc.body.content.filter(({ table }) => table)[0];
@@ -195,6 +217,34 @@ async function main() {
       answer: getAnswer(row),
     }));
 
+  // Fetch image dimensions for glossary images
+  const imageDimensions = {};
+  if (updateImages) {
+    const imageUrls = rows
+      .map((row) => row.image?.match(/!\[\]\((.*?)\)/)?.[1])
+      .filter(Boolean);
+    const uniqueUrls = [...new Set(imageUrls)];
+
+    console.log(
+      `Fetching dimensions for ${uniqueUrls.length} unique images...`
+    );
+
+    for (const url of uniqueUrls) {
+      const dimensions = await getImageDimensions(url);
+      if (dimensions) {
+        imageDimensions[url] = dimensions;
+      }
+    }
+
+    console.log(
+      `Successfully captured ${
+        Object.keys(imageDimensions).length
+      } image dimensions`
+    );
+  }
+
+  documentContext.imageDimensions = imageDimensions;
+
   // Get existing glossary entries
   const existingGlossary = await getGlossary();
 
@@ -202,11 +252,6 @@ async function main() {
     `\nFound ${existingGlossary.length} existing entries in Coda glossary`
   );
   console.log(`Found ${rows.length} entries in Google Doc`);
-  console.log(
-    `Captured ${
-      Object.keys(imageDimensions).length
-    } image dimensions from Google Doc`
-  );
   console.log(
     `Image updates are ${
       updateImages ? "ENABLED" : "DISABLED"
