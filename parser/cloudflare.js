@@ -44,9 +44,6 @@ const getImageDimensions = async (url) => {
 
     const buffer = Buffer.from(await response.arrayBuffer());
     const dimensions = imageSize(buffer);
-    console.log(
-      `Got dimensions for image: ${dimensions.width}x${dimensions.height}`
-    );
     return { width: dimensions.width, height: dimensions.height };
   } catch (error) {
     console.warn(`Error getting image dimensions:`, error.message);
@@ -98,13 +95,6 @@ export const replaceImages = async (objects, uiid) => {
       }
     } else {
       skippedCount++;
-      // Log first skipped object to understand structure
-      if (skippedCount === 1) {
-        console.log(
-          "First skipped inline object structure:",
-          JSON.stringify(obj, null, 2).substring(0, 500)
-        );
-      }
     }
   });
 

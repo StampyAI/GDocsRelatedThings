@@ -72,16 +72,6 @@ const setGlossary = async (metadata) => {
     const shouldUpdateImage = existingImage === "" || updateImages;
     const imageToUpdate = shouldUpdateImage ? newImage : undefined;
 
-    // Log first image update to verify dimensions are being passed
-    const isFirstImageLog =
-      !global.firstImageLogged && imageToUpdate && metadata.imageDimensions;
-    if (isFirstImageLog) {
-      global.firstImageLogged = true;
-      console.log(`\nExample: Updating "${phrase}" with image and dimensions:`);
-      console.log(`  URL: ${imageToUpdate.substring(0, 80)}...`);
-      console.log(`  Dimensions: ${JSON.stringify(metadata.imageDimensions)}`);
-    }
-
     const res = await updateGlossary(
       phrase,
       answer?.answerName || "",
@@ -240,28 +230,14 @@ async function main() {
 
   // Fetch dimensions for any images in the parsed table that we don't have yet
   if (updateImages) {
-    console.log(`\nChecking for images in ${rows.length} rows...`);
-
     const imageUrls = rows
       .map((row) => row.image?.match(/!\[\]\((.*?)\)/)?.[1])
       .filter(Boolean);
     const uniqueUrls = [...new Set(imageUrls)];
 
-    console.log(
-      `Found ${imageUrls.length} total images, ${uniqueUrls.length} unique images`
-    );
-    console.log(
-      `Already have dimensions for ${
-        Object.keys(imageDimensions).length
-      } images from replaceImages`
-    );
-
     // Only fetch dimensions for URLs we don't have yet
     const urlsNeedingDimensions = uniqueUrls.filter(
       (url) => !imageDimensions[url]
-    );
-    console.log(
-      `Fetching dimensions for ${urlsNeedingDimensions.length} additional images...`
     );
 
     for (const url of urlsNeedingDimensions) {
@@ -272,9 +248,7 @@ async function main() {
     }
 
     console.log(
-      `Successfully captured ${
-        Object.keys(imageDimensions).length
-      } total image dimensions`
+      `Captured ${Object.keys(imageDimensions).length} image dimensions`
     );
   }
 
