@@ -259,11 +259,15 @@ async function main() {
       // If there's no existing image, always consider adding a new one
       imageDifferent = Boolean(newImageNormalized);
     } else {
-      // If there is an existing image, only update if --update-images flag is provided
+      // If there is an existing image, update if:
+      // 1. --update-images flag is provided AND
+      // 2. (URL is different OR we have new dimensions to add)
+      const hasNewDimensions =
+        dimensions && dimensions.width && dimensions.height;
       imageDifferent =
         updateImages &&
         Boolean(newImageNormalized) &&
-        existingImage !== newImageNormalized;
+        (existingImage !== newImageNormalized || hasNewDimensions);
     }
 
     // Determine if update is needed
