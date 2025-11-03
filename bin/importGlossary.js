@@ -128,6 +128,16 @@ const normalizeTerm = (term) => {
 async function main() {
   console.log("Fetching data from Google Doc and Coda...");
 
+  // Check for Cloudflare credentials if updating images
+  if (updateImages && !process.env.CLOUDFLARE_ACCOUNT_ID) {
+    console.error("\nCannot update images without Cloudflare credentials.");
+    console.error(
+      "The --update-images flag requires CLOUDFLARE_ACCOUNT_ID and CLOUDFLARE_API_TOKEN."
+    );
+    console.error("These are only available in GitHub Actions.\n");
+    process.exit(1);
+  }
+
   // Fetch Google Doc
   const gdocsClient = await getDocsClient();
   const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
@@ -185,6 +195,11 @@ async function main() {
     `\nFound ${existingGlossary.length} existing entries in Coda glossary`
   );
   console.log(`Found ${rows.length} entries in Google Doc`);
+  console.log(
+    `Captured ${
+      Object.keys(imageDimensions).length
+    } image dimensions from Google Doc`
+  );
   console.log(
     `Image updates are ${
       updateImages ? "ENABLED" : "DISABLED"
