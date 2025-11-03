@@ -72,6 +72,16 @@ const setGlossary = async (metadata) => {
     const shouldUpdateImage = existingImage === "" || updateImages;
     const imageToUpdate = shouldUpdateImage ? newImage : undefined;
 
+    // Log first image update to verify dimensions are being passed
+    const isFirstImageLog =
+      !global.firstImageLogged && imageToUpdate && metadata.imageDimensions;
+    if (isFirstImageLog) {
+      global.firstImageLogged = true;
+      console.log(`\nExample: Updating "${phrase}" with image and dimensions:`);
+      console.log(`  URL: ${imageToUpdate.substring(0, 80)}...`);
+      console.log(`  Dimensions: ${JSON.stringify(metadata.imageDimensions)}`);
+    }
+
     const res = await updateGlossary(
       phrase,
       answer?.answerName || "",
