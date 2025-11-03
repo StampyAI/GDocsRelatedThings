@@ -52,7 +52,8 @@ const setGlossary = async (metadata) => {
       answer?.UIID || "",
       definition,
       aliases,
-      imageToUpdate
+      imageToUpdate,
+      shouldUpdateImage ? metadata.imageDimensions : undefined
     );
 
     if (res.status === 429) {
@@ -130,7 +131,13 @@ async function main() {
   // Fetch Google Doc
   const gdocsClient = await getDocsClient();
   const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
-  await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
+  const imageDimensions = await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
+  const documentContext = {
+    footnotes: doc.footnotes || {},
+    namedStyles: doc.namedStyles,
+    inlineObjects: doc.inlineObjects,
+    imageDimensions,
+  };
 
   const table = doc.body.content.filter(({ table }) => table)[0];
 
@@ -211,6 +218,11 @@ async function main() {
     const imgMatch = row.image?.match(/!\[\]\((.*?)\)/);
     const newImage = imgMatch?.[1];
 
+    // Get image dimensions if available
+    const dimensions = newImage
+      ? documentContext.imageDimensions[newImage]
+      : null;
+
     // If no existing entry found, mark as new
     if (!existingEntry) {
       return {
@@ -218,6 +230,7 @@ async function main() {
         needsUpdate: true,
         existsInCoda: false,
         parsedImage: newImage,
+        imageDimensions: dimensions,
       };
     }
 
@@ -263,6 +276,7 @@ async function main() {
       existsInCoda: true,
       existingEntry,
       parsedImage: newImage,
+      imageDimensions: dimensions,
     };
   });
 
