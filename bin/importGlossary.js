@@ -141,6 +141,13 @@ async function main() {
   // Fetch Google Doc
   const gdocsClient = await getDocsClient();
   const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
+
+  console.log(
+    `Found ${
+      Object.keys(doc.inlineObjects || {}).length
+    } inline objects in document`
+  );
+
   const imageDimensions = await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
   const documentContext = {
     footnotes: doc.footnotes || {},
