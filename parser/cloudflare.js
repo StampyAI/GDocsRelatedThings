@@ -36,16 +36,21 @@ const getImageDimensions = async (url) => {
     const response = await fetch(url);
     if (!response.ok) {
       console.warn(
-        `Failed to fetch image for dimensions: ${response.statusText}`
+        `Failed to fetch image: ${response.status} ${response.statusText}`
       );
+      console.warn(`URL: ${url}`);
       return null;
     }
 
     const buffer = Buffer.from(await response.arrayBuffer());
     const dimensions = imageSize(buffer);
+    console.log(
+      `Got dimensions for image: ${dimensions.width}x${dimensions.height}`
+    );
     return { width: dimensions.width, height: dimensions.height };
   } catch (error) {
-    console.warn(`Error getting image dimensions for ${url}:`, error.message);
+    console.warn(`Error getting image dimensions:`, error.message);
+    console.warn(`URL: ${url}`);
     return null;
   }
 };
@@ -66,10 +71,13 @@ export const replaceImages = async (objects, uiid) => {
 
   const fingerprint = randomUUID();
   const imageDimensions = {};
+  let processedCount = 0;
+  let skippedCount = 0;
 
   const updates = Object.entries(objects || {}).map(async ([key, obj]) => {
     const img = obj?.inlineObjectProperties?.embeddedObject;
     if (img) {
+      processedCount++;
       const originalUri = img.imageProperties.contentUri;
 
       // Get dimensions before uploading
@@ -88,10 +96,22 @@ export const replaceImages = async (objects, uiid) => {
       if (dimensions && newUri) {
         imageDimensions[newUri] = dimensions;
       }
+    } else {
+      skippedCount++;
+      // Log first skipped object to understand structure
+      if (skippedCount === 1) {
+        console.log(
+          "First skipped inline object structure:",
+          JSON.stringify(obj, null, 2).substring(0, 500)
+        );
+      }
     }
   });
 
   await Promise.all(updates);
+  console.log(
+    `Processed ${processedCount} images, skipped ${skippedCount} inline objects`
+  );
   return imageDimensions;
 };
 
