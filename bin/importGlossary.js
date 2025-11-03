@@ -9,6 +9,7 @@ import { getDocsClient, getGoogleDoc } from "../parser/gdrive.js";
 import { tableURL, GLOSSARY_DOC } from "../parser/constants.js";
 import { logError, withRetry } from "../parser/utils.js";
 import { replaceImages } from "../parser/cloudflare.js";
+import { parseParagraph } from "../parser/parser.js";
 import imageSize from "image-size";
 
 // --------------------------------------------------------------------------
@@ -193,14 +194,22 @@ async function main() {
       Object.entries(row).map(([k, v]) => [k.replaceAll("*", ""), v])
     );
 
+  // Create paragraph parser to handle inline objects (images) in table cells
+  const paragraphParser = parseParagraph(documentContext);
+  const extractAllParagraphs = (blocks) =>
+    blocks
+      .filter((block) => Object.keys(block).includes("paragraph"))
+      .map((b) => b.paragraph);
+
   // Parse rows from Google Doc (skip header row)
   const rows = table.table.tableRows
     .slice(1)
     .map((row) => {
       const getValue = (cell) =>
-        cell.content?.[0]?.paragraph?.elements
-          ?.map((el) => el.textRun?.content || "")
-          .join("") || "";
+        extractAllParagraphs(cell.content || [])
+          .map(paragraphParser)
+          .join("\n")
+          .trim();
 
       return {
         term: getValue(row.tableCells[0]),
