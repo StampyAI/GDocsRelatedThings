@@ -168,8 +168,10 @@ async function main() {
   const doc = await getGoogleDoc({ docID: GLOSSARY_DOC }, gdocsClient);
 
   // Upload any new/changed images to Cloudflare (updates doc.inlineObjects in place)
+  // and capture the dimensions that were fetched during upload
+  let imageDimensions = {};
   if (updateImages) {
-    await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
+    imageDimensions = await replaceImages(doc.inlineObjects, GLOSSARY_DOC);
   }
 
   const documentContext = {
@@ -217,19 +219,33 @@ async function main() {
       answer: getAnswer(row),
     }));
 
-  // Fetch image dimensions for glossary images
-  const imageDimensions = {};
+  // Fetch dimensions for any images in the parsed table that we don't have yet
   if (updateImages) {
+    console.log(`\nChecking for images in ${rows.length} rows...`);
+
     const imageUrls = rows
       .map((row) => row.image?.match(/!\[\]\((.*?)\)/)?.[1])
       .filter(Boolean);
     const uniqueUrls = [...new Set(imageUrls)];
 
     console.log(
-      `Fetching dimensions for ${uniqueUrls.length} unique images...`
+      `Found ${imageUrls.length} total images, ${uniqueUrls.length} unique images`
+    );
+    console.log(
+      `Already have dimensions for ${
+        Object.keys(imageDimensions).length
+      } images from replaceImages`
     );
 
-    for (const url of uniqueUrls) {
+    // Only fetch dimensions for URLs we don't have yet
+    const urlsNeedingDimensions = uniqueUrls.filter(
+      (url) => !imageDimensions[url]
+    );
+    console.log(
+      `Fetching dimensions for ${urlsNeedingDimensions.length} additional images...`
+    );
+
+    for (const url of urlsNeedingDimensions) {
       const dimensions = await getImageDimensions(url);
       if (dimensions) {
         imageDimensions[url] = dimensions;
@@ -239,7 +255,7 @@ async function main() {
     console.log(
       `Successfully captured ${
         Object.keys(imageDimensions).length
-      } image dimensions`
+      } total image dimensions`
     );
   }
 
