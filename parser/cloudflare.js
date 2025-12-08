@@ -132,4 +132,14 @@ export const questionImages = async () => {
   return questions;
 };
 
-export const deleteImage = async (id) => sendRequest(`v1/${id}`, "DELETE");
+export const deleteImage = async (id) => {
+  try {
+    return await sendRequest(`v1/${id}`, "DELETE");
+  } catch (error) {
+    // 404 means the image is already gone, which is the desired outcome
+    if (error.status === 404) {
+      return { success: true };
+    }
+    throw error;
+  }
+};
