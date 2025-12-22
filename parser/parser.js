@@ -646,7 +646,8 @@ export const tableParser = (context) => {
     }
 
     // Use markdown-table to generate properly formatted markdown table
-    return markdownTable(rawRows);
+    // alignDelimiters: false avoids padding columns to equal width, saving significant space
+    return markdownTable(rawRows, { alignDelimiters: false });
   };
 };
 

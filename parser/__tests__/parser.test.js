@@ -1315,7 +1315,7 @@ describe("tableParser", () => {
     expect(result).toContain("| Header 1");
     expect(result).toContain("| Header 2");
     expect(result).toContain("| Header 3");
-    expect(result).toContain("| -----------"); // Should have separator line
+    expect(result).toContain("| - |"); // Should have separator line (compact format)
     expect(result).toContain("| Row 1 Col 1");
     expect(result).toContain("| Row 2 Col 1");
   });
