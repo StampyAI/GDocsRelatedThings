@@ -137,11 +137,23 @@ const saveAnswer = async (
     );
     return false;
   } else {
-    const error = await response.json();
-    await logError(
-      `HTTP ${response.status} response from Coda for "${answer.answerName}: ${error.message}"`,
-      answer
-    );
+    // Check if response is JSON before parsing
+    const contentType = response.headers.get("content-type");
+    if (contentType && !contentType.includes("application/json")) {
+      const responseText = await response.text();
+      await logError(
+        `HTTP ${response.status} non-JSON response from Coda for "${
+          answer.answerName
+        }": ${responseText.substring(0, 300)}`,
+        answer
+      );
+    } else {
+      const error = await response.json();
+      await logError(
+        `HTTP ${response.status} response from Coda for "${answer.answerName}: ${error.message}"`,
+        answer
+      );
+    }
     return false;
   }
   return true;

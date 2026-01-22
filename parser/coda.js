@@ -24,10 +24,13 @@ const codaRequest = async (url, options = { headers: {} }) =>
       contentType &&
       !contentType.includes("application/json")
     ) {
+      // Read the response body to capture error details for debugging
+      const responseText = await response.text();
       const error = new Error(
         `Coda API returned non-JSON response: ${contentType}`
       );
       error.status = response.status;
+      error.rawHtml = responseText;
       throw error;
     }
 
