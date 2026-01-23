@@ -197,7 +197,7 @@ export const withRetry = async (fn, operationName, options = {}) => {
         );
 
         // Log more details about the error for debugging
-        if (error instanceof SyntaxError && error.rawHtml) {
+        if (error.rawHtml) {
           console.error("Failed with HTML response (first 500 chars):");
           console.error(error.rawHtml.substring(0, 500));
         }
@@ -213,6 +213,12 @@ export const withRetry = async (fn, operationName, options = {}) => {
         }s...`
       );
       console.log(`Error: ${error.message}`);
+      // Log HTML snippet on first retry only to avoid log spam
+      if (error.rawHtml && retryCount === 1) {
+        console.log(
+          `HTML response (first 300 chars): ${error.rawHtml.substring(0, 300)}`
+        );
+      }
 
       // Wait before retrying
       await new Promise((resolve) => setTimeout(resolve, delay));

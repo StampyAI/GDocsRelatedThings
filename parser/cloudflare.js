@@ -17,8 +17,22 @@ const sendRequest = (endpoint, method, body) =>
       );
 
       if (!response.ok) {
+        const responseText = await response.text();
         const error = new Error(`Cloudflare API error: ${response.statusText}`);
         error.status = response.status;
+        error.rawHtml = responseText;
+        throw error;
+      }
+
+      // Check for non-JSON responses
+      const contentType = response.headers.get("content-type");
+      if (contentType && !contentType.includes("application/json")) {
+        const responseText = await response.text();
+        const error = new Error(
+          `Cloudflare API returned non-JSON response: ${contentType}`
+        );
+        error.status = response.status;
+        error.rawHtml = responseText;
         throw error;
       }
 

@@ -51,7 +51,9 @@ describe("getTag", () => {
         },
       },
     };
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    fetchMock.mockResponse(JSON.stringify(mockResponse), {
+      headers: { "content-type": "application/json" },
+    });
 
     const result = await getTag("https://bla.bla", "test");
 
@@ -62,7 +64,9 @@ describe("getTag", () => {
 
   it("should return error message for invalid input", async () => {
     const mockResponse = { data: {} };
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    fetchMock.mockResponse(JSON.stringify(mockResponse), {
+      headers: { "content-type": "application/json" },
+    });
 
     const result = await getTag("https://bla.bla", "test");
 
@@ -988,7 +992,9 @@ describe("parseDoc", () => {
       },
     };
 
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    fetchMock.mockResponse(JSON.stringify(mockResponse), {
+      headers: { "content-type": "application/json" },
+    });
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
@@ -1006,7 +1012,9 @@ describe("parseDoc", () => {
         ],
       },
     };
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    fetchMock.mockResponse(JSON.stringify(mockResponse), {
+      headers: { "content-type": "application/json" },
+    });
     const result = await parseDoc(doc);
 
     expect(result.md).toEqual(
@@ -1097,7 +1105,9 @@ describe("fetchExternalContent", () => {
       makeText("").paragraph,
       { elements: [{}] },
     ];
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    fetchMock.mockResponse(JSON.stringify(mockResponse), {
+      headers: { "content-type": "application/json" },
+    });
     const result = await fetchExternalContent(paragraphs);
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",
@@ -1134,7 +1144,9 @@ describe("fetchExternalContent", () => {
         paragraphStyle: { namedStyleType: "NORMAL_TEXT" },
       },
     ];
-    fetchMock.mockResponse(JSON.stringify(mockResponse));
+    fetchMock.mockResponse(JSON.stringify(mockResponse), {
+      headers: { "content-type": "application/json" },
+    });
     const result = await fetchExternalContent(paragraphs);
     expect(result).toEqual({
       content: "This is an example LW tag content (see mockResponse)",

@@ -247,6 +247,20 @@ const LWGraphQLQuery = async (host, query) => {
     headers,
     body: JSON.stringify({ query }),
   });
+
+  // Check for non-JSON responses (e.g., HTML error pages)
+  const contentType = result.headers.get("content-type");
+  if (contentType && !contentType.includes("application/json")) {
+    const responseText = await result.text();
+    console.error(
+      `GraphQL request to ${host} returned non-JSON response: ${contentType}`
+    );
+    console.error(
+      `Response (first 500 chars): ${responseText.substring(0, 500)}`
+    );
+    throw new Error(`GraphQL returned non-JSON response: ${contentType}`);
+  }
+
   return await result.json();
 };
 
