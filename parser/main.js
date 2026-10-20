@@ -292,7 +292,7 @@ const parseAllAnswerDocs = async () => {
         lastIngestDateString === "" ||
         lastDocEditDate > lastIngestDate ||
         answer.answerName === "Example with all the formatting" ||
-        Boolean(process.env.PARSE_ALL);
+        process.env.PARSE_ALL === "true";
       return !["Withdrawn", "Uncategorized"].includes(status) && needsUpdate;
     })
     // Process the answers serially, as otherwise Google and Coda will complain that the script is hammering them
