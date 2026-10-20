@@ -108,7 +108,8 @@ export const sendToDiscord = (
  * @param {Error} error - Error object
  */
 export const logError = (msg, answer, error) => {
-  console.error(msg, error?.message || "");
+  const name = answer?.answerName ? ` [${answer.answerName}]` : "";
+  console.error(msg + name, error?.message || "");
 
   let fields = {
     "Question being processed at time of error":

@@ -300,17 +300,21 @@ const parseAllAnswerDocs = async () => {
     .map(idChecker(allAnswers))
     .reduce(async (previousPromise, answer) => {
       const previousResults = await previousPromise;
+      let ok;
       try {
-        return [...previousResults, await answerProcessor(answer)];
+        ok = await answerProcessor(answer);
       } catch (err) {
         console.error(err);
-        return [...previousResults, false];
+        ok = false;
       }
+      return [...previousResults, { answerName: answer.answerName, ok }];
     }, Promise.resolve([]));
 
+  const failedNames = results.filter((r) => !r.ok).map((r) => r.answerName);
   return {
-    succeeded: results.filter((i) => i).length,
-    failed: results.filter((i) => !i).length,
+    succeeded: results.length - failedNames.length,
+    failed: failedNames.length,
+    failedNames,
   };
 };
 
