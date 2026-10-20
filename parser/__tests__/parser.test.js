@@ -571,6 +571,55 @@ describe("parseDoc", () => {
     expect(result.md).toContain("Second bullet\n\nAnother paragraph");
   });
 
+  it("handles ordered lists inside table cells", async () => {
+    const cell = (content) => ({ content });
+    const textParagraph = (startIndex, text, bullet) => ({
+      paragraph: {
+        elements: [{ startIndex, textRun: { content: text } }],
+        ...(bullet && { bullet }),
+      },
+    });
+    const doc = {
+      body: {
+        content: [
+          {
+            table: {
+              tableRows: [
+                {
+                  tableCells: [
+                    cell([textParagraph(100, "Question")]),
+                    cell([textParagraph(200, "Answers")]),
+                  ],
+                },
+                {
+                  tableCells: [
+                    cell([textParagraph(300, "Pick one")]),
+                    cell([
+                      textParagraph(400, "Yes", { listId: "list1" }),
+                      textParagraph(500, "No", { listId: "list1" }),
+                    ]),
+                  ],
+                },
+              ],
+            },
+          },
+        ],
+      },
+      lists: {
+        list1: {
+          listProperties: {
+            nestingLevels: [{ glyphType: "UPPER_ALPHA" }],
+          },
+        },
+      },
+      footnotes: {},
+    };
+
+    const result = await parseDoc(doc);
+
+    expect(result.md).toContain("| Pick one | • Yes<br>• No |");
+  });
+
   it("does not insert extra blank lines inside consecutive blockquotes and preserves quoted lists", async () => {
     const doc = {
       body: {

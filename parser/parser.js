@@ -49,6 +49,18 @@ const extractAllParagraphs = (blocks) =>
     .filter((block) => Object.keys(block).includes("paragraph"))
     .map((b) => b.paragraph);
 
+// Like extractAllParagraphs, but also includes paragraphs inside table cells
+const extractNestedParagraphs = (blocks) =>
+  blocks.flatMap((block) =>
+    block.paragraph
+      ? [block.paragraph]
+      : block.table
+      ? (block.table.tableRows || []).flatMap(({ tableCells }) =>
+          tableCells.flatMap(({ content }) => extractNestedParagraphs(content))
+        )
+      : []
+  );
+
 const extractDocParts = (doc) => {
   const sectionHeaders = {
     "alternative phrasings": "alternatives",
@@ -101,7 +113,7 @@ export const parseDoc = async (doc, answer) => {
     inlineObjects: doc.inlineObjects,
     lists: doc.lists || {},
     suggestions: new Map(), // Accumulators for the count and total text length of all suggestions
-    getBulletOrderNumber: makeBulletOrderMap(paragraphs),
+    getBulletOrderNumber: makeBulletOrderMap(extractNestedParagraphs(elements)),
   };
   // If the content is just a link to external content, fetch it and use it as the contents
   const tagContent = await fetchExternalContent(paragraphs);
